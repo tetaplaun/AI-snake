@@ -91,6 +91,7 @@
                 <p><span class="stat-label">Success Rate:</span> <span id="success-rate" class="stat-value">0%</span></p>
                 <p><span class="stat-label">Avg Reward:</span> <span id="avg-reward" class="stat-value">0</span></p>
                 <p><span class="stat-label">Exploration Rate (ε):</span> <span id="epsilon" class="stat-value">0</span></p>
+                <p><span class="stat-label">Learning Rate (α):</span> <span id="learning-rate" class="stat-value">0</span></p>
                 <p><span class="stat-label">Avg Steps/Apple:</span> <span id="steps-per-apple" class="stat-value">0</span></p>
             </div>
         </div>
@@ -102,6 +103,7 @@
 
         <div class="chart-container">
             <div id="score-chart"></div>
+            <div id="learning-rate-chart"></div>
         </div>
     </div>
 
@@ -109,6 +111,7 @@
         const socket = io();
         let scores = [];
         let episodes = [];
+        let learningRates = [];
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 20;
@@ -169,13 +172,15 @@
             document.getElementById('success-rate').textContent = metrics.success_rate.toFixed(1) + '%';
             document.getElementById('avg-reward').textContent = metrics.avg_reward.toFixed(2);
             document.getElementById('epsilon').textContent = metrics.epsilon.toFixed(3);
+            document.getElementById('learning-rate').textContent = metrics.learning_rate.toFixed(6);
             document.getElementById('steps-per-apple').textContent = metrics.avg_steps_per_apple.toFixed(1);
 
-            // Update chart
+            // Update charts
             scores.push(metrics.current_score);
             episodes.push(metrics.episodes);
+            learningRates.push(metrics.learning_rate);
 
-            const trace = {
+            const scoreTrace = {
                 x: episodes,
                 y: scores,
                 type: 'scatter',
@@ -186,7 +191,32 @@
                 }
             };
 
+            const learningRateTrace = {
+                x: episodes,
+                y: learningRates,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Learning Rate',
+                yaxis: 'y2',
+                line: {
+                    color: '#E74C3C'
+                }
+            };
+
             const layout = {
+                grid: {
+                    rows: 2,
+                    columns: 1,
+                    pattern: 'independent'
+                },
+                paper_bgcolor: '#34495E',
+                plot_bgcolor: '#34495E',
+                font: {
+                    color: '#ECF0F1'
+                }
+            };
+
+            const scoreLayout = {
                 title: 'Training Progress',
                 paper_bgcolor: '#34495E',
                 plot_bgcolor: '#34495E',
@@ -203,7 +233,26 @@
                 }
             };
 
-            Plotly.newPlot('score-chart', [trace], layout);
+            const learningRateLayout = {
+                title: 'Learning Rate Adaptation',
+                paper_bgcolor: '#34495E',
+                plot_bgcolor: '#34495E',
+                font: {
+                    color: '#ECF0F1'
+                },
+                xaxis: {
+                    title: 'Episode',
+                    gridcolor: '#455565'
+                },
+                yaxis: {
+                    title: 'Learning Rate',
+                    gridcolor: '#455565',
+                    type: 'log'
+                }
+            };
+
+            Plotly.newPlot('score-chart', [scoreTrace], scoreLayout);
+            Plotly.newPlot('learning-rate-chart', [learningRateTrace], learningRateLayout);
         });
 
         socket.on('game_state_update', function(data) {

@@ -13,6 +13,13 @@ class QLearningAgent:
         self.epsilon_decay = 0.995
         self.last_scores = []
 
+        # Adaptive learning rate parameters
+        self.min_learning_rate = 0.0001
+        self.max_learning_rate = 0.01
+        self.performance_window = 10
+        self.learning_rate_increase = 1.05
+        self.learning_rate_decrease = 0.95
+
     def _get_state_key(self, state):
         return tuple(state.astype(int))
 
@@ -28,7 +35,32 @@ class QLearningAgent:
         # Add small random noise to break ties
         return np.argmax(self.q_table[state_key] + np.random.uniform(0, 0.01, self.action_size))
 
-    def train(self, state, action, reward, next_state, done):
+    def adjust_learning_rate(self, score):
+        """Adjust learning rate based on recent performance"""
+        self.last_scores.append(score)
+        if len(self.last_scores) > self.performance_window:
+            self.last_scores.pop(0)
+
+            # Calculate performance trend
+            if len(self.last_scores) >= 2:
+                recent_avg = np.mean(self.last_scores[-5:])
+                previous_avg = np.mean(self.last_scores[:-5])
+
+                # Adjust learning rate based on performance
+                if recent_avg > previous_avg:
+                    # If improving, increase learning rate
+                    self.learning_rate = min(
+                        self.max_learning_rate,
+                        self.learning_rate * self.learning_rate_increase
+                    )
+                else:
+                    # If not improving, decrease learning rate
+                    self.learning_rate = max(
+                        self.min_learning_rate,
+                        self.learning_rate * self.learning_rate_decrease
+                    )
+
+    def train(self, state, action, reward, next_state, done, score=0):
         state_key = self._get_state_key(state)
         next_state_key = self._get_state_key(next_state)
 
@@ -42,6 +74,8 @@ class QLearningAgent:
         current_q = self.q_table[state_key][action]
         if done:
             next_max_q = 0
+            # Adjust learning rate at episode end
+            self.adjust_learning_rate(score)
         else:
             next_max_q = np.max(self.q_table[next_state_key])
 
@@ -58,4 +92,5 @@ class QLearningAgent:
         if saved_state and 'q_table' in saved_state:
             self.q_table = saved_state['q_table']
             self.epsilon = saved_state.get('epsilon', self.epsilon)
-            print(f"Loaded Q-table with {len(self.q_table)} states and epsilon: {self.epsilon}", flush=True)
+            self.learning_rate = saved_state.get('learning_rate', self.learning_rate)
+            print(f"Loaded Q-table with {len(self.q_table)} states, epsilon: {self.epsilon}, learning rate: {self.learning_rate}", flush=True)

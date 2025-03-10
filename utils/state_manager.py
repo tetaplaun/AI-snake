@@ -1,12 +1,20 @@
 import numpy as np
 from models import db, QTableEntry, TrainingMetrics
 from web.app import app
+import logging
+
+logger = logging.getLogger(__name__)
 
 class StateManager:
     def __init__(self):
         # Ensure database tables exist
         with app.app_context():
-            db.create_all()
+            try:
+                logger.info("Initializing database tables...")
+                db.create_all()
+            except Exception as e:
+                logger.error(f"Error initializing database: {e}")
+                raise
 
     def save_state(self, state_dict):
         """
@@ -44,9 +52,10 @@ class StateManager:
                 db.session.add(metrics)
 
                 db.session.commit()
-            return True
+                logger.info("Successfully saved state to database")
+                return True
         except Exception as e:
-            print(f"Error saving state to database: {e}", flush=True)
+            logger.error(f"Error saving state to database: {e}")
             db.session.rollback()
             return False
 
@@ -72,13 +81,15 @@ class StateManager:
                 scores = [m.score for m in metrics]
 
                 if not q_table or not scores:
+                    logger.info("No previous state found in database")
                     return None
 
+                logger.info(f"Successfully loaded state with {len(q_table)} Q-table entries")
                 return {
                     'q_table': q_table,
                     'scores': scores,
                     'epsilon': latest_metrics.epsilon if latest_metrics else 0.1
                 }
         except Exception as e:
-            print(f"Error loading state from database: {e}", flush=True)
+            logger.error(f"Error loading state from database: {e}")
             return None

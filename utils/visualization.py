@@ -6,22 +6,24 @@ class MetricsVisualizer:
         self.scores = []
         self.rewards = []
         self.steps_per_apple = []
+        self.learning_rates = []
         self.successful_episodes = 0
         self.total_episodes = 0
         self.moving_avg_window = 20
 
-    def update_score(self, score, total_reward, steps, epsilon):
+    def update_score(self, score, total_reward, steps, epsilon, learning_rate):
         self.scores.append(score)
         self.rewards.append(total_reward)
+        self.learning_rates.append(learning_rate)
         self.total_episodes += 1
         if score > 0:
             self.successful_episodes += 1
             self.steps_per_apple.append(steps / score)  # steps per apple collected
 
-        self.print_stats(epsilon)
-        self.broadcast_stats(epsilon)
+        self.print_stats(epsilon, learning_rate)
+        self.broadcast_stats(epsilon, learning_rate)
 
-    def print_stats(self, epsilon):
+    def print_stats(self, epsilon, learning_rate):
         if len(self.scores) > 0:
             current_score = self.scores[-1]
             avg_score = np.mean(self.scores)
@@ -45,10 +47,11 @@ class MetricsVisualizer:
             print(f"Success Rate: {success_rate:.1f}%", flush=True)
             print(f"Average Reward: {avg_reward:.2f}", flush=True)
             print(f"Exploration Rate (ε): {epsilon:.3f}", flush=True)
+            print(f"Learning Rate (α): {learning_rate:.6f}", flush=True)
             print(f"Avg Steps per Apple: {avg_steps_per_apple:.1f}", flush=True)
             print("-" * 40, flush=True)
 
-    def broadcast_stats(self, epsilon):
+    def broadcast_stats(self, epsilon, learning_rate):
         if len(self.scores) > 0:
             success_rate = (self.successful_episodes / self.total_episodes) * 100
             avg_reward = np.mean(self.rewards[-self.moving_avg_window:]) if len(self.rewards) >= self.moving_avg_window else np.mean(self.rewards)
@@ -63,6 +66,7 @@ class MetricsVisualizer:
                 'success_rate': float(success_rate),
                 'avg_reward': float(avg_reward),
                 'epsilon': float(epsilon),
+                'learning_rate': float(learning_rate),
                 'avg_steps_per_apple': float(avg_steps_per_apple)
             }
             broadcast_metrics(metrics)

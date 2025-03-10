@@ -4,11 +4,17 @@ from flask_sqlalchemy import SQLAlchemy
 import json
 import numpy as np
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 # Configure database
+logger.info("Configuring database connection...")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -23,9 +29,13 @@ db = SQLAlchemy(app)
 def index():
     return render_template('dashboard.html')
 
+@app.route('/health')
+def health_check():
+    return 'OK', 200
+
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected', flush=True)
+    logger.info('Client connected')
 
 @socketio.on('reset_training')
 def handle_reset():
@@ -34,11 +44,11 @@ def handle_reset():
             # Clear all tables
             db.session.execute(db.text('TRUNCATE TABLE q_table_entries, training_metrics RESTART IDENTITY CASCADE'))
             db.session.commit()
-            print("Training data reset successfully", flush=True)
+            logger.info("Training data reset successfully")
             socketio.emit('training_reset')
             return True
     except Exception as e:
-        print(f"Error resetting training data: {e}", flush=True)
+        logger.error(f"Error resetting training data: {e}")
         return False
 
 def broadcast_metrics(metrics):
@@ -55,4 +65,10 @@ def broadcast_game_state(game_state):
     }))
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    try:
+        logger.info("Starting Flask server...")
+        # ALWAYS serve the app on port 5000
+        socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, log_output=True)
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}")
+        raise
