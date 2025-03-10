@@ -72,7 +72,10 @@ def run_training():
             if episodes % save_interval == 0:
                 state_manager.save_state({
                     'q_table': agent.q_table,
-                    'scores': metrics_visualizer.scores
+                    'scores': metrics_visualizer.scores,
+                    'steps': steps,
+                    'total_reward': total_reward,
+                    'epsilon': agent.epsilon
                 })
                 print(f"\nSaved training state at episode {episodes}", flush=True)
 
@@ -80,7 +83,10 @@ def run_training():
         print("\nTraining interrupted. Saving final state...", flush=True)
         state_manager.save_state({
             'q_table': agent.q_table,
-            'scores': metrics_visualizer.scores
+            'scores': metrics_visualizer.scores,
+            'steps': steps,
+            'total_reward': total_reward,
+            'epsilon': agent.epsilon
         })
         print("Final state saved. Exiting...", flush=True)
         sys.exit(0)
