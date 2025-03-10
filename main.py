@@ -3,7 +3,9 @@ import time
 import threading
 import logging
 from game.snake_game import SnakeGame
+from game.multiplayer_game import MultiplayerSnakeGame
 from ai.agent import QLearningAgent
+from ai.competition import CompetitionManager
 from utils.visualization import MetricsVisualizer
 from utils.state_manager import StateManager
 from web.app import app, socketio, db
@@ -11,6 +13,9 @@ from web.app import app, socketio, db
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Global variables for competition mode
+competition_in_progress = False
 
 def run_training():
     """Run the training loop in a separate thread"""
@@ -50,6 +55,11 @@ def run_training():
         save_interval = 100  # Save every 100 episodes
 
         while True:
+            # Skip training if competition is in progress
+            if competition_in_progress:
+                time.sleep(1)
+                continue
+                
             try:
                 episodes += 1
                 state = game.reset()
@@ -59,7 +69,7 @@ def run_training():
 
                 logger.info(f"\nEpisode {episodes} started")
 
-                while not done:
+                while not done and not competition_in_progress:
                     # Get action from agent
                     action = agent.get_action(state)
                     steps += 1
@@ -79,24 +89,25 @@ def run_training():
                     # Add small delay to make it observable
                     time.sleep(0.01)
 
-                # Update and display metrics
-                logger.info(f"Episode {episodes} finished - Score: {game.score}, Steps: {steps}")
-                metrics_visualizer.update_score(game.score, total_reward, steps, agent.epsilon, agent.learning_rate)
+                # Update and display metrics (if not interrupted by competition)
+                if not competition_in_progress:
+                    logger.info(f"Episode {episodes} finished - Score: {game.score}, Steps: {steps}")
+                    metrics_visualizer.update_score(game.score, total_reward, steps, agent.epsilon, agent.learning_rate)
 
-                # Save state periodically
-                if episodes % save_interval == 0:
-                    try:
-                        state_manager.save_state({
-                            'q_table': agent.q_table,
-                            'scores': metrics_visualizer.scores,
-                            'steps': steps,
-                            'total_reward': total_reward,
-                            'epsilon': agent.epsilon,
-                            'learning_rate': agent.learning_rate
-                        })
-                        logger.info(f"\nSaved training state at episode {episodes}")
-                    except Exception as e:
-                        logger.error(f"Error saving state at episode {episodes}: {e}")
+                    # Save state periodically
+                    if episodes % save_interval == 0:
+                        try:
+                            state_manager.save_state({
+                                'q_table': agent.q_table,
+                                'scores': metrics_visualizer.scores,
+                                'steps': steps,
+                                'total_reward': total_reward,
+                                'epsilon': agent.epsilon,
+                                'learning_rate': agent.learning_rate
+                            })
+                            logger.info(f"\nSaved training state at episode {episodes}")
+                        except Exception as e:
+                            logger.error(f"Error saving state at episode {episodes}: {e}")
 
             except Exception as e:
                 logger.error(f"Error in episode {episodes}: {e}", exc_info=True)
@@ -106,6 +117,55 @@ def run_training():
     except Exception as e:
         logger.error(f"Critical error in training loop: {e}", exc_info=True)
         return
+
+def run_competition():
+    """Run a competition between two AI agents"""
+    global competition_in_progress
+    
+    try:
+        logger.info("Starting Snake AI Competition...")
+        competition_in_progress = True
+        
+        # Load trained agent if available
+        state_manager = StateManager()
+        saved_state = state_manager.load_state()
+        
+        # Create primary agent (either from saved state or new)
+        agent1 = QLearningAgent(state_size=27, action_size=3)
+        if saved_state:
+            agent1.load_state(saved_state)
+            logger.info("Loaded previously trained agent for competition")
+        
+        # Create a challenger agent (new with some randomness)
+        agent2 = QLearningAgent(state_size=27, action_size=3)
+        # Make agent2 more exploratory for variety
+        agent2.epsilon = 0.2
+        
+        # Create competition manager
+        competition = CompetitionManager(agent1, agent2)
+        
+        # Run the competition (10 rounds by default)
+        competition.run_competition(num_rounds=10)
+        
+        # Competition complete
+        competition_in_progress = False
+        logger.info("Competition completed")
+        
+    except Exception as e:
+        logger.error(f"Error in competition: {e}", exc_info=True)
+        competition_in_progress = False
+        return
+
+# Socket.IO event handler for starting competition
+@socketio.on('start_competition')
+def handle_start_competition():
+    if not competition_in_progress:
+        # Start competition in a separate thread
+        competition_thread = threading.Thread(target=run_competition)
+        competition_thread.daemon = True
+        competition_thread.start()
+        return True
+    return False
 
 if __name__ == "__main__":
     try:
@@ -117,7 +177,6 @@ if __name__ == "__main__":
 
         logger.info("Starting Flask server...")
 
-        # Start the Flask server in the main thread
         # Start training in a background thread after a short delay
         training_thread = threading.Thread(target=run_training)
         training_thread.daemon = True

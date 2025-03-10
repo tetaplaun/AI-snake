@@ -29,6 +29,10 @@ db = SQLAlchemy(app)
 def index():
     return render_template('dashboard.html')
 
+@app.route('/multiplayer')
+def multiplayer():
+    return render_template('multiplayer.html')
+
 @app.route('/health')
 def health_check():
     return 'OK', 200
@@ -51,6 +55,12 @@ def handle_reset():
         logger.error(f"Error resetting training data: {e}")
         return False
 
+@socketio.on('start_competition')
+def handle_start_competition():
+    logger.info("Starting AI competition...")
+    socketio.emit('competition_started')
+    return True
+
 def broadcast_metrics(metrics):
     socketio.emit('metrics_update', json.dumps(metrics))
 
@@ -63,6 +73,25 @@ def broadcast_game_state(game_state):
         'snake': snake_positions,
         'apple': apple_position
     }))
+
+def broadcast_multiplayer_game_state(game_state):
+    # Convert numpy int64 to regular Python int
+    snake1_positions = [(int(x), int(y)) for x, y in game_state.snake1]
+    snake2_positions = [(int(x), int(y)) for x, y in game_state.snake2]
+    apple1_position = (int(game_state.apple1[0]), int(game_state.apple1[1]))
+    apple2_position = (int(game_state.apple2[0]), int(game_state.apple2[1]))
+
+    socketio.emit('multiplayer_state_update', json.dumps({
+        'snake1': snake1_positions,
+        'snake2': snake2_positions,
+        'apple1': apple1_position,
+        'apple2': apple2_position,
+        'score1': game_state.score1,
+        'score2': game_state.score2
+    }))
+
+def broadcast_competition_result(result):
+    socketio.emit('competition_result', json.dumps(result))
 
 if __name__ == '__main__':
     try:
