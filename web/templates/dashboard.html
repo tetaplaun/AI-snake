@@ -198,6 +198,10 @@
         <div class="section-title">Failure Analysis</div>
         <div class="failure-stats">
           <div class="failure-reason">
+            <span>Wall Collisions:</span>
+            <span id="wall-collisions">0</span>
+          </div>
+          <div class="failure-reason">
             <span class="stat-label">Wall Collision</span>
             <span id="wall-collision-percent" class="stat-value">0%</span>
           </div>
@@ -282,12 +286,17 @@
       const GRID_HEIGHT = 30 // WINDOW_HEIGHT (600) / GRID_SIZE (20)
       const GRID_SIZE = 20
 
+      // Game state variables
+      let lastGameState = null
+      let wallCollisionCount = 0 // Track wall collisions
+
       // Set canvas dimensions to match the grid
       function resizeCanvas() {
         // Calculate container width (50% of parent width)
         const parentWidth = canvas.parentElement.clientWidth
         const containerWidth = Math.min(parentWidth * 0.5, 400) // 50% of parent width, max 400px
 
+        // Add extra space for walls (2 cells in width, 2 cells in height)
         canvas.width = containerWidth
         canvas.height = (containerWidth / GRID_WIDTH) * GRID_HEIGHT
       }
@@ -297,6 +306,9 @@
 
       // Initialize empty charts on page load
       document.addEventListener("DOMContentLoaded", function () {
+        // Initialize wall collision counter with existing failure stats
+        document.getElementById("wall-collisions").textContent = failureStats.wallCollision || "0"
+
         // Create empty traces for initial charts
         const emptyTrace = {
           x: [],
@@ -375,6 +387,8 @@
           socket.emit("reset_training")
           startTime = new Date() // Reset timer
           failureStats = { wallCollision: 0, selfCollision: 0, timeout: 0, total: 0 }
+          wallCollisionCount = 0
+          document.getElementById("wall-collisions").textContent = "0"
         }
       })
 
@@ -412,20 +426,245 @@
         const cellWidth = canvas.width / GRID_WIDTH
         const cellHeight = canvas.height / GRID_HEIGHT
 
-        // Draw grid
+        // Draw wall boxes - positioned at the edges of the canvas
+        const normalWallColor = "rgba(120, 120, 120, 0.8)" // Darker grey with higher opacity
+        let collidedWallBox = null
+        let collidedWallColor = null
+
+        // Determine if there's a wall collision and which box was hit
+        if (gameState.failure_reason === "wall" && gameState.collision_flash) {
+          const [x, y, opacity] = gameState.collision_flash
+          console.log("Wall collision detected:", x, y, opacity)
+
+          // Create a pulsing effect for the collided wall
+          const pulseRate = 0.2 // Slower pulse rate
+          const pulseOpacity = (Math.sin((Date.now() * pulseRate) / 1000) * 0.2 + 0.8) * opacity // Higher base opacity
+          collidedWallColor = `rgba(255, 0, 0, ${pulseOpacity})`
+
+          // Determine which wall box was hit
+          if (x <= 0) {
+            // Left wall collision
+            collidedWallBox = { x: 0, y: Math.floor(y) }
+          } else if (x >= GRID_WIDTH - 1) {
+            // Right wall collision
+            collidedWallBox = { x: GRID_WIDTH - 1, y: Math.floor(y) }
+          }
+
+          if (y <= 0) {
+            // Top wall collision
+            collidedWallBox = { x: Math.floor(x), y: 0 }
+          } else if (y >= GRID_HEIGHT - 1) {
+            // Bottom wall collision
+            collidedWallBox = { x: Math.floor(x), y: GRID_HEIGHT - 1 }
+          }
+        }
+
+        // First, draw the playable grid - before the walls
         ctx.strokeStyle = "#34495E"
         ctx.lineWidth = 0.5 // Thinner grid lines
-        for (let x = 0; x <= GRID_WIDTH; x++) {
+        // Draw vertical grid lines (adjust to leave space for walls)
+        for (let x = 1; x < GRID_WIDTH; x++) {
           ctx.beginPath()
-          ctx.moveTo(x * cellWidth, 0)
-          ctx.lineTo(x * cellWidth, canvas.height)
+          ctx.moveTo(x * cellWidth, cellHeight)
+          ctx.lineTo(x * cellWidth, canvas.height - cellHeight)
           ctx.stroke()
         }
-        for (let y = 0; y <= GRID_HEIGHT; y++) {
+        // Draw horizontal grid lines (adjust to leave space for walls)
+        for (let y = 1; y < GRID_HEIGHT; y++) {
           ctx.beginPath()
-          ctx.moveTo(0, y * cellHeight)
-          ctx.lineTo(canvas.width, y * cellHeight)
+          ctx.moveTo(cellWidth, y * cellHeight)
+          ctx.lineTo(canvas.width - cellWidth, y * cellHeight)
           ctx.stroke()
+        }
+
+        // Draw top wall boxes - positioned at the top edge of the canvas
+        for (let x = 0; x < GRID_WIDTH; x++) {
+          const isCollided = collidedWallBox && collidedWallBox.x === x && collidedWallBox.y === 0
+          ctx.fillStyle = isCollided ? collidedWallColor : normalWallColor
+
+          // Make collided box slightly larger
+          const boxSize = isCollided ? 1.2 : 1
+          const xPos = x * cellWidth
+          const yPos = 0 // Position at the top edge of canvas
+          const width = cellWidth * boxSize
+          const height = cellHeight * boxSize
+
+          // Draw with adjustment for larger size
+          ctx.fillRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+
+          // Add border
+          ctx.strokeStyle = "rgba(60, 60, 60, 0.9)" // Darker border
+          ctx.lineWidth = 1.5 // Thicker border
+          ctx.strokeRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+        }
+
+        // Draw bottom wall boxes - positioned at the bottom edge of the canvas
+        for (let x = 0; x < GRID_WIDTH; x++) {
+          const isCollided =
+            collidedWallBox && collidedWallBox.x === x && collidedWallBox.y === GRID_HEIGHT - 1
+          ctx.fillStyle = isCollided ? collidedWallColor : normalWallColor
+
+          // Make collided box slightly larger
+          const boxSize = isCollided ? 1.2 : 1
+          const xPos = x * cellWidth
+          const yPos = canvas.height - cellHeight // Position at the bottom edge, visible
+          const width = cellWidth * boxSize
+          const height = cellHeight * boxSize
+
+          // Draw with adjustment for larger size
+          ctx.fillRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+
+          // Add border
+          ctx.strokeStyle = "rgba(60, 60, 60, 0.9)" // Darker border
+          ctx.lineWidth = 1.5 // Thicker border
+          ctx.strokeRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+        }
+
+        // Draw left wall boxes - positioned at the left edge of the canvas
+        for (let y = 0; y < GRID_HEIGHT; y++) {
+          const isCollided = collidedWallBox && collidedWallBox.x === 0 && collidedWallBox.y === y
+          ctx.fillStyle = isCollided ? collidedWallColor : normalWallColor
+
+          // Make collided box slightly larger
+          const boxSize = isCollided ? 1.2 : 1
+          const xPos = 0 // Position at the left edge of canvas
+          const yPos = y * cellHeight
+          const width = cellWidth * boxSize
+          const height = cellHeight * boxSize
+
+          // Draw with adjustment for larger size
+          ctx.fillRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+
+          // Add border
+          ctx.strokeStyle = "rgba(60, 60, 60, 0.9)" // Darker border
+          ctx.lineWidth = 1.5 // Thicker border
+          ctx.strokeRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+        }
+
+        // Draw right wall boxes - positioned at the right edge of the canvas
+        for (let y = 0; y < GRID_HEIGHT; y++) {
+          const isCollided =
+            collidedWallBox && collidedWallBox.x === GRID_WIDTH - 1 && collidedWallBox.y === y
+          ctx.fillStyle = isCollided ? collidedWallColor : normalWallColor
+
+          // Make collided box slightly larger
+          const boxSize = isCollided ? 1.2 : 1
+          const xPos = canvas.width - cellWidth // Position at the right edge, visible
+          const yPos = y * cellHeight
+          const width = cellWidth * boxSize
+          const height = cellHeight * boxSize
+
+          // Draw with adjustment for larger size
+          ctx.fillRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+
+          // Add border
+          ctx.strokeStyle = "rgba(60, 60, 60, 0.9)" // Darker border
+          ctx.lineWidth = 1.5 // Thicker border
+          ctx.strokeRect(
+            xPos - (width - cellWidth) / 2,
+            yPos - (height - cellHeight) / 2,
+            width,
+            height
+          )
+        }
+
+        // Add a "pop" animation for the collided box
+        if (collidedWallBox && gameState.collision_flash) {
+          const [x, y, opacity] = gameState.collision_flash
+
+          // Only show the pop animation when opacity is high enough
+          if (opacity > 0.3) {
+            // Lower threshold to make it more visible
+            let centerX, centerY
+
+            if (collidedWallBox.x === 0) {
+              // Left wall
+              centerX = cellWidth / 2
+              centerY = collidedWallBox.y * cellHeight + cellHeight / 2
+            } else if (collidedWallBox.x === GRID_WIDTH - 1) {
+              // Right wall
+              centerX = canvas.width - cellWidth / 2
+              centerY = collidedWallBox.y * cellHeight + cellHeight / 2
+            } else if (collidedWallBox.y === 0) {
+              // Top wall
+              centerX = collidedWallBox.x * cellWidth + cellWidth / 2
+              centerY = cellHeight / 2
+            } else if (collidedWallBox.y === GRID_HEIGHT - 1) {
+              // Bottom wall
+              centerX = collidedWallBox.x * cellWidth + cellWidth / 2
+              centerY = canvas.height - cellHeight / 2
+            }
+
+            // Draw a circular flash
+            const radius = Math.max(cellWidth, cellHeight) * 2 * opacity // Larger radius
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius)
+
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.9})`) // Brighter flash
+            gradient.addColorStop(0.5, `rgba(255, 100, 100, ${opacity * 0.7})`) // More visible middle
+            gradient.addColorStop(1, `rgba(255, 50, 50, 0)`)
+
+            ctx.fillStyle = gradient
+            ctx.beginPath()
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+            ctx.fill()
+
+            // Add text label near the collision - larger and more visible
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`
+            ctx.font = "bold 18px Arial" // Larger font
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+
+            // Add background for text
+            const textWidth = 100
+            const textHeight = 24
+            ctx.fillStyle = `rgba(0, 0, 0, ${opacity * 0.7})`
+            ctx.fillRect(centerX - textWidth / 2, centerY - textHeight / 2, textWidth, textHeight)
+
+            // Draw text
+            ctx.fillStyle = `rgba(255, 50, 50, ${opacity})`
+            ctx.fillText("WALL HIT", centerX, centerY)
+
+            // Add pulsing border around the entire game area when collision occurs
+            const borderPulse = (Math.sin((Date.now() * 0.3) / 1000) * 0.3 + 0.7) * opacity
+            ctx.strokeStyle = `rgba(255, 0, 0, ${borderPulse})`
+            ctx.lineWidth = 3
+            ctx.strokeRect(0, 0, canvas.width, canvas.height)
+          }
         }
 
         // Draw snake
@@ -448,11 +687,12 @@
           cellHeight - 1
         )
 
-        // Draw collision flash if it exists
+        // Draw collision flash if it exists (keep this for non-wall collisions)
         if (
           gameState.collision_flash &&
           Array.isArray(gameState.collision_flash) &&
-          gameState.collision_flash.length === 3
+          gameState.collision_flash.length === 3 &&
+          gameState.failure_reason !== "wall" // Only show for non-wall collisions
         ) {
           try {
             const [x, y, opacity] = gameState.collision_flash
@@ -503,6 +743,8 @@
             failureStats.total++
             if (metrics.failure_reason === "wall") {
               failureStats.wallCollision++
+              // Update the wall collision counter
+              document.getElementById("wall-collisions").textContent = failureStats.wallCollision
             } else if (metrics.failure_reason === "self") {
               failureStats.selfCollision++
             } else if (metrics.failure_reason === "timeout") {
@@ -696,8 +938,25 @@
       }
 
       socket.on("game_state_update", function (data) {
-        const gameState = JSON.parse(data)
-        drawGame(gameState)
+        try {
+          const gameState = JSON.parse(data)
+
+          // Check for new wall collision
+          if (
+            gameState.failure_reason === "wall" &&
+            (!lastGameState || lastGameState.failure_reason !== "wall")
+          ) {
+            wallCollisionCount++
+            // Update wall collision counter in the UI
+            document.getElementById("wall-collisions").textContent =
+              failureStats.wallCollision || wallCollisionCount
+          }
+
+          lastGameState = gameState
+          drawGame(gameState)
+        } catch (error) {
+          console.error("Error processing game state:", error)
+        }
       })
 
       socket.on("training_reset", function () {
@@ -720,6 +979,10 @@
           timeout: 0,
           total: 0,
         }
+
+        // Reset wall collision counter
+        wallCollisionCount = 0
+        document.getElementById("wall-collisions").textContent = "0"
 
         // Update failure stats display
         document.getElementById("wall-collision-percent").textContent = "0%"

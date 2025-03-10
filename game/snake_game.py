@@ -44,13 +44,16 @@ class SnakeGame:
                 'snake': self.snake.tolist(),
                 'apple': self.apple.tolist(),
                 'score': self.score,
-                'collision_flash': collision_flash_json
+                'collision_flash': collision_flash_json,
+                'failure_reason': self.failure_reason
             }
             self.socketio.emit('game_state_update', json.dumps(game_state))
 
             # Fade out the collision flash if it exists
             if self.collision_flash:
-                self.collision_flash[2] -= 0.1  # Reduce opacity
+                # Slower fade for wall collisions
+                fade_rate = 0.01 if self.failure_reason == "wall" else 0.05
+                self.collision_flash[2] -= fade_rate  # Reduce opacity
                 if self.collision_flash[2] <= 0:
                     self.collision_flash = None  # Remove flash when fully faded
 
@@ -75,9 +78,10 @@ class SnakeGame:
     def _generate_apple(self):
         """Generate a new apple position"""
         while True:
+            # Generate apple only within the valid game grid (excluding walls)
             apple = np.array([
-                np.random.randint(0, self.grid_width),
-                np.random.randint(0, self.grid_height)
+                np.random.randint(1, self.grid_width - 1),  # Avoid wall positions (0 and width-1)
+                np.random.randint(1, self.grid_height - 1)  # Avoid wall positions (0 and height-1)
             ])
             # Check if apple is not on snake
             if not any(np.array_equal(apple, segment) for segment in self.snake):
@@ -155,22 +159,19 @@ class SnakeGame:
             pos[1] < 0 or pos[1] >= self.grid_height):
             self.failure_reason = "wall"
             # Record collision point for flash effect
-            # Clamp position to grid boundaries
+            # Use the actual collision position for better visualization
             flash_pos = np.array(pos, dtype=np.float64)  # Ensure it's a numpy array
-            if flash_pos[0] < 0:
-                flash_pos[0] = 0
-            elif flash_pos[0] >= self.grid_width:
-                flash_pos[0] = self.grid_width - 1
-            if flash_pos[1] < 0:
-                flash_pos[1] = 0
-            elif flash_pos[1] >= self.grid_height:
-                flash_pos[1] = self.grid_height - 1
+
+            # Keep the exact collision coordinates for better visualization
+            # This will be used to determine which wall was hit
             self.collision_flash = [float(flash_pos[0]), float(flash_pos[1]), 1.0]  # [x, y, opacity]
             return True
 
         # Check self collision
         if any(np.array_equal(pos, segment) for segment in self.snake[1:]):
             self.failure_reason = "self"
+            # For self collisions, use the exact position
+            self.collision_flash = [float(pos[0]), float(pos[1]), 1.0]
             return True
 
         return False
