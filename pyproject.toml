@@ -4,10 +4,13 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "flask-sqlalchemy>=3.1.1",
     "flask>=3.1.0",
     "flask-socketio>=5.5.1",
     "matplotlib>=3.10.1",
     "numpy>=2.2.3",
     "pygame>=2.6.1",
     "python-socketio>=5.12.1",
+    "sqlalchemy>=2.0.38",
+    "psycopg2-binary>=2.9.10",
 ]

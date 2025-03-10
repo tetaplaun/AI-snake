@@ -1,10 +1,23 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+from flask_sqlalchemy import SQLAlchemy
 import json
 import numpy as np
+import os
 
 app = Flask(__name__)
 socketio = SocketIO(app)
+
+# Configure database
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True
+}
+
+# Initialize SQLAlchemy with the Flask app
+db = SQLAlchemy(app)
 
 @app.route('/')
 def index():

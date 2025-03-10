@@ -5,7 +5,7 @@ from game.snake_game import SnakeGame
 from ai.agent import QLearningAgent
 from utils.visualization import MetricsVisualizer
 from utils.state_manager import StateManager
-from web.app import app, socketio
+from web.app import app, socketio, db
 
 def run_training():
     print("Starting Snake AI Training...", flush=True)
@@ -86,6 +86,10 @@ def run_training():
         sys.exit(0)
 
 if __name__ == "__main__":
+    # Create database tables before starting
+    with app.app_context():
+        db.create_all()
+
     # Start training in a separate thread
     training_thread = threading.Thread(target=run_training)
     training_thread.daemon = True
