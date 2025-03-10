@@ -82,8 +82,8 @@ class SnakeGame:
         obstacle_d = nearest_obstacle[1] > head[1]
 
         return np.array(danger + [dir_l, dir_r, dir_u, dir_d, 
-                                   apple_l, apple_r, apple_u, apple_d,
-                                   obstacle_l, obstacle_r, obstacle_u, obstacle_d])
+                                    apple_l, apple_r, apple_u, apple_d,
+                                    obstacle_l, obstacle_r, obstacle_u, obstacle_d])
 
     def _find_nearest_obstacle(self, pos):
         if not self.obstacles:

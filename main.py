@@ -16,7 +16,7 @@ def run_training():
     game = SnakeGame()
 
     # Initialize AI agent with expanded state size
-    state_size = 16  # Updated state size to include obstacle info
+    state_size = 15  # 3 danger + 4 direction + 4 apple + 4 obstacle
     action_size = 3
     agent = DQNAgent(state_size=state_size, action_size=action_size)
 
