@@ -43,20 +43,6 @@
             font-weight: bold;
             color: #2ECC71;
         }
-        .milestone {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        .milestone.achieved {
-            background-color: #27AE60;
-            color: white;
-        }
-        .milestone.pending {
-            background-color: #34495E;
-            color: #95A5A6;
-        }
         #game-canvas {
             background-color: #2C3E50;
             border-radius: 4px;
@@ -77,22 +63,6 @@
                 <p>Average Score: <span id="avg-score" class="stat-value">0</span></p>
                 <p>Max Score: <span id="max-score" class="stat-value">0</span></p>
                 <p>Episodes: <span id="episodes" class="stat-value">0</span></p>
-            </div>
-
-            <h2>Learning Milestones</h2>
-            <div id="milestones">
-                <div class="milestone pending" id="milestone-avg-5">
-                    🎯 Average Score > 5
-                </div>
-                <div class="milestone pending" id="milestone-avg-10">
-                    🏆 Average Score > 10
-                </div>
-                <div class="milestone pending" id="milestone-max-15">
-                    🌟 Max Score > 15
-                </div>
-                <div class="milestone pending" id="milestone-learning">
-                    📈 Consistent Learning
-                </div>
             </div>
         </div>
 
@@ -147,17 +117,6 @@
             );
         }
 
-        function updateMilestones(milestones) {
-            document.getElementById('milestone-avg-5').className = 
-                milestones.avg_score_5 ? 'milestone achieved' : 'milestone pending';
-            document.getElementById('milestone-avg-10').className = 
-                milestones.avg_score_10 ? 'milestone achieved' : 'milestone pending';
-            document.getElementById('milestone-max-15').className = 
-                milestones.max_score_15 ? 'milestone achieved' : 'milestone pending';
-            document.getElementById('milestone-learning').className = 
-                milestones.consistent_learning ? 'milestone achieved' : 'milestone pending';
-        }
-
         socket.on('metrics_update', function(data) {
             const metrics = JSON.parse(data);
 
@@ -166,11 +125,6 @@
             document.getElementById('avg-score').textContent = metrics.avg_score.toFixed(2);
             document.getElementById('max-score').textContent = metrics.max_score;
             document.getElementById('episodes').textContent = metrics.episodes;
-
-            // Update milestones
-            if (metrics.milestones) {
-                updateMilestones(metrics.milestones);
-            }
 
             // Update chart
             scores.push(metrics.current_score);

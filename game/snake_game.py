@@ -38,16 +38,13 @@ class SnakeGame:
         dir_u = np.array_equal(self.direction, [0, -1])
         dir_d = np.array_equal(self.direction, [0, 1])
 
-        # Apple location relative to head
+        # Apple location
         apple_l = self.apple[0] < head[0]
         apple_r = self.apple[0] > head[0]
         apple_u = self.apple[1] < head[1]
         apple_d = self.apple[1] > head[1]
 
-        # Convert to numpy array with float32 type for PyTorch
-        state = np.array(danger + [dir_l, dir_r, dir_u, dir_d, apple_l, apple_r, apple_u, apple_d], dtype=np.float32)
-        print(f"State shape: {state.shape}, State: {state}", flush=True)  # Debug log
-        return state
+        return np.array(danger + [dir_l, dir_r, dir_u, dir_d, apple_l, apple_r, apple_u, apple_d])
 
     def _is_collision(self, pos):
         return (pos[0] < 0 or pos[0] >= GRID_WIDTH or
