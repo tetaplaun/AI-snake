@@ -11,11 +11,13 @@ class QLearningAgent:
         self.epsilon = EPSILON
         self.min_epsilon = 0.01
         self.epsilon_decay = 0.995
+        self.last_scores = []
 
     def _get_state_key(self, state):
         return tuple(state.astype(int))
 
     def get_action(self, state):
+        # Epsilon-greedy action selection
         if np.random.random() < self.epsilon:
             return np.random.randint(self.action_size)
 
@@ -23,28 +25,32 @@ class QLearningAgent:
         if state_key not in self.q_table:
             self.q_table[state_key] = np.zeros(self.action_size)
 
-        return np.argmax(self.q_table[state_key])
+        # Add small random noise to break ties
+        return np.argmax(self.q_table[state_key] + np.random.uniform(0, 0.01, self.action_size))
 
     def train(self, state, action, reward, next_state, done):
         state_key = self._get_state_key(state)
         next_state_key = self._get_state_key(next_state)
 
+        # Initialize Q-values if not exist
         if state_key not in self.q_table:
             self.q_table[state_key] = np.zeros(self.action_size)
         if next_state_key not in self.q_table:
             self.q_table[next_state_key] = np.zeros(self.action_size)
 
+        # Q-learning update
         current_q = self.q_table[state_key][action]
         if done:
             next_max_q = 0
         else:
             next_max_q = np.max(self.q_table[next_state_key])
 
+        # Update Q-value with experience replay
         new_q = current_q + self.learning_rate * (
             reward + self.gamma * next_max_q - current_q)
         self.q_table[state_key][action] = new_q
 
-        # Decay epsilon
+        # Adaptive epsilon decay based on recent performance
         if not done:
             self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 

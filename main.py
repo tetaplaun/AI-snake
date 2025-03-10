@@ -14,8 +14,8 @@ def run_training():
     # Create game instance
     game = SnakeGame()
 
-    # Initialize AI agent
-    agent = QLearningAgent(state_size=12, action_size=3)
+    # Initialize AI agent with expanded state size
+    agent = QLearningAgent(state_size=19, action_size=3)  
 
     # Initialize state manager and metrics visualizer
     state_manager = StateManager()
@@ -101,7 +101,7 @@ def save_checkpoint():
         metrics_visualizer = MetricsVisualizer()
 
         # Get the latest Q-table from the agent
-        agent = QLearningAgent(state_size=12, action_size=3)
+        agent = QLearningAgent(state_size=19, action_size=3) # Updated state size to 19
         saved_state = state_manager.load_state()
         if saved_state:
             agent.load_state(saved_state)

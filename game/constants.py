@@ -13,8 +13,8 @@ GRID_WIDTH = WINDOW_WIDTH // GRID_SIZE
 GRID_HEIGHT = WINDOW_HEIGHT // GRID_SIZE
 
 # AI settings
-LEARNING_RATE = 0.1
-DISCOUNT_FACTOR = 0.95
+LEARNING_RATE = 0.001  # Reduced to make learning more stable
+DISCOUNT_FACTOR = 0.99  # Increased to make agent more forward-thinking
 EPSILON = 0.1
 
 # Font settings
@@ -22,6 +22,8 @@ FONT_NAME = "monospace"
 FONT_SIZE = 16
 
 # Rewards
-REWARD_APPLE = 10
-REWARD_MOVE = -0.1
-REWARD_DEATH = -10
+REWARD_APPLE = 20.0  # Increased reward for getting apple
+REWARD_MOVE = -0.01  # Smaller penalty for moving
+REWARD_DEATH = -30.0  # Increased penalty for death
+REWARD_CLOSER_TO_APPLE = 0.1  # New reward for moving closer to apple
+REWARD_AWAY_FROM_APPLE = -0.1  # New penalty for moving away from apple
