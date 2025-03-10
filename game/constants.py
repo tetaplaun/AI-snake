@@ -15,7 +15,7 @@ GRID_HEIGHT = WINDOW_HEIGHT // GRID_SIZE
 NUM_OBSTACLES = 5  # Reduced from 10 to 5 obstacles
 
 # AI settings
-LEARNING_RATE = 0.1
+LEARNING_RATE = 0.001  # Reduced from 0.1 for more stable DQN learning
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.3  # Increased from 0.1 to encourage more exploration
 

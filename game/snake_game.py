@@ -6,6 +6,7 @@ from web.app import broadcast_game_state
 class SnakeGame:
     def __init__(self):
         self.reset()
+        self.last_distance = None
 
     def reset(self):
         self.snake = deque([(GRID_WIDTH // 2, GRID_HEIGHT // 2)])
@@ -13,6 +14,8 @@ class SnakeGame:
         self.obstacles = self._generate_obstacles()
         self.apple = self._generate_apple()
         self.score = 0
+        self.last_distance = self._get_distance_to_apple()
+        print(f"\nGame Reset - Apple position: {self.apple}, Initial distance: {self.last_distance}", flush=True)
         broadcast_game_state(self)
         return self.get_state()
 
@@ -30,6 +33,7 @@ class SnakeGame:
                 if not self._would_block_paths(pos, obstacles):
                     obstacles.add(pos)
 
+        print(f"Generated {len(obstacles)} obstacles", flush=True)
         return obstacles
 
     def _would_block_paths(self, new_obstacle, existing_obstacles):
@@ -50,7 +54,12 @@ class SnakeGame:
                 # Ensure the apple is not too close to obstacles
                 if not any(abs(apple[0] - obs[0]) + abs(apple[1] - obs[1]) < 3 
                          for obs in self.obstacles):
+                    print(f"Generated new apple at position: {apple}", flush=True)
                     return apple
+
+    def _get_distance_to_apple(self):
+        head = self.snake[0]
+        return abs(head[0] - self.apple[0]) + abs(head[1] - self.apple[1])
 
     def get_state(self):
         head = self.snake[0]
@@ -117,17 +126,31 @@ class SnakeGame:
 
         # Check collision with walls, self, or obstacles
         if self._is_collision(new_head):
-            return REWARD_DEATH if tuple(new_head) not in self.obstacles else REWARD_OBSTACLE, True
+            if tuple(new_head) in self.obstacles:
+                print(f"Collision with obstacle at {new_head}", flush=True)
+                return REWARD_OBSTACLE, True
+            print(f"Collision at {new_head}", flush=True)
+            return REWARD_DEATH, True
 
         self.snake.appendleft(new_head)
 
         # Check apple
         if new_head == self.apple:
             self.score += 1
+            print(f"\nApple collected! Score: {self.score}", flush=True)
             self.apple = self._generate_apple()
+            self.last_distance = self._get_distance_to_apple()
             broadcast_game_state(self)
             return REWARD_APPLE, False
         else:
+            # Calculate distance-based reward
+            current_distance = self._get_distance_to_apple()
+            distance_reward = (self.last_distance - current_distance) * 0.1
+            self.last_distance = current_distance
+
+            if distance_reward != 0:
+                print(f"Distance reward: {distance_reward:.3f} (moved {'closer to' if distance_reward > 0 else 'away from'} apple)", flush=True)
+
             self.snake.pop()
             broadcast_game_state(self)
-            return REWARD_MOVE, False
+            return REWARD_MOVE + distance_reward, False
