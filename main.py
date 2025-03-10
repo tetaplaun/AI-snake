@@ -40,6 +40,7 @@ def run_training():
             state = game.reset()
             done = False
             steps = 0
+            total_reward = 0
 
             print(f"\nEpisode {episodes} started", flush=True)
 
@@ -50,6 +51,7 @@ def run_training():
 
                 # Execute action and get reward
                 reward, done = game.step(action)
+                total_reward += reward
 
                 # Get new state
                 next_state = game.get_state()
@@ -64,7 +66,7 @@ def run_training():
 
             # Update and display metrics
             print(f"Episode {episodes} finished - Score: {game.score}, Steps: {steps}", flush=True)
-            metrics_visualizer.update_score(game.score)
+            metrics_visualizer.update_score(game.score, total_reward, steps, agent.epsilon)
 
             # Save state periodically
             if episodes % save_interval == 0:
