@@ -101,12 +101,6 @@
                 ctx.stroke();
             }
 
-            // Draw obstacles
-            ctx.fillStyle = '#8E44AD';  // Purple color for obstacles
-            gameState.obstacles.forEach(([x, y]) => {
-                ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
-            });
-
             // Draw snake
             ctx.fillStyle = '#2ECC71';
             gameState.snake.forEach(([x, y]) => {

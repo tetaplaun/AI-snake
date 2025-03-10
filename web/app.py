@@ -21,12 +21,10 @@ def broadcast_game_state(game_state):
     # Convert numpy int64 to regular Python int
     snake_positions = [(int(x), int(y)) for x, y in game_state.snake]
     apple_position = (int(game_state.apple[0]), int(game_state.apple[1]))
-    obstacle_positions = [(int(x), int(y)) for x, y in game_state.obstacles]
 
     socketio.emit('game_state_update', json.dumps({
         'snake': snake_positions,
-        'apple': apple_position,
-        'obstacles': obstacle_positions
+        'apple': apple_position
     }))
 
 if __name__ == '__main__':
