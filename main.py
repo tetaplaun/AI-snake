@@ -135,6 +135,8 @@ def run_competition():
         if saved_state:
             agent1.load_state(saved_state)
             logger.info("Loaded previously trained agent for competition")
+        else:
+            logger.info("No saved state found, using a new agent for competition")
         
         # Create a challenger agent (new with some randomness)
         agent2 = QLearningAgent(state_size=27, action_size=3)
@@ -144,17 +146,18 @@ def run_competition():
         # Create competition manager
         competition = CompetitionManager(agent1, agent2)
         
-        # Run the competition (10 rounds by default)
-        competition.run_competition(num_rounds=10)
+        # Run the competition (5 rounds by default - smaller for testing)
+        logger.info("Starting competition execution...")
+        competition.run_competition(num_rounds=5)
         
         # Competition complete
-        competition_in_progress = False
-        logger.info("Competition completed")
+        logger.info("Competition completed successfully")
         
     except Exception as e:
         logger.error(f"Error in competition: {e}", exc_info=True)
+    finally:
+        # Always make sure to reset this flag
         competition_in_progress = False
-        return
 
 # Socket.IO event handler for starting competition
 @socketio.on('start_competition')

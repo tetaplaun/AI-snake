@@ -57,7 +57,8 @@ def handle_reset():
 
 @socketio.on('start_competition')
 def handle_start_competition():
-    logger.info("Starting AI competition...")
+    logger.info("Received request to start AI competition...")
+    # The actual competition starting logic is in main.py
     socketio.emit('competition_started')
     return True
 
