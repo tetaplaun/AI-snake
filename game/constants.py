@@ -5,10 +5,10 @@ BACKGROUND_COLOR = (44, 62, 80)  # #2C3E50
 GRID_COLOR = (52, 73, 94)     # #34495E
 TEXT_COLOR = (236, 240, 241)  # #ECF0F1
 
-# Game settings
+# Game constants
+GRID_SIZE = 20
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
-GRID_SIZE = 20
 GRID_WIDTH = WINDOW_WIDTH // GRID_SIZE
 GRID_HEIGHT = WINDOW_HEIGHT // GRID_SIZE
 
@@ -22,8 +22,8 @@ FONT_NAME = "monospace"
 FONT_SIZE = 16
 
 # Rewards
-REWARD_APPLE = 25.0  # Increased reward for getting apple
-REWARD_MOVE = 0.0  # No penalty for moving
-REWARD_DEATH = -30.0  # Same penalty for death 
-REWARD_CLOSER_TO_APPLE = 0.2  # Increased reward for moving closer to apple
-REWARD_AWAY_FROM_APPLE = -0.1  # Same penalty for moving away from apple
+REWARD_MOVE = 0.0
+REWARD_APPLE = 10.0
+REWARD_DEATH = -10.0
+REWARD_CLOSER_TO_APPLE = 0.1
+REWARD_AWAY_FROM_APPLE = -0.1

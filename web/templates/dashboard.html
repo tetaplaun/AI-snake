@@ -1,285 +1,821 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Snake AI Training Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-            background-color: #2C3E50;
-            color: #ECF0F1;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-        .stats-panel {
-            background-color: #34495E;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            grid-column: 2;
-        }
-        .game-panel {
-            background-color: #34495E;
-            padding: 20px;
-            border-radius: 8px;
-            grid-column: 1;
-            grid-row: 1 / span 2;
-        }
-        .chart-container {
-            background-color: #34495E;
-            padding: 20px;
-            border-radius: 8px;
-            grid-column: 2;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2ECC71;
-        }
-        .stat-label {
-            color: #95A5A6;
-            font-size: 14px;
-        }
-        #game-canvas {
-            background-color: #2C3E50;
-            border-radius: 4px;
-        }
-        .control-panel {
-            background-color: #34495E;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            grid-column: 2;
-        }
-        .reset-button {
-            background-color: #E74C3C;
-            color: #ECF0F1;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            transition: background-color 0.3s;
-        }
-        .reset-button:hover {
-            background-color: #C0392B;
-        }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #2c3e50;
+        color: #ecf0f1;
+        overflow-x: hidden;
+      }
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+          "game-view stats"
+          "charts controls";
+        gap: 15px;
+        padding: 15px;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+      .panel {
+        background-color: #34495e;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .game-panel {
+        grid-area: game-view;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .stats-panel {
+        grid-area: stats;
+        overflow-y: auto;
+        max-height: calc(100vh - 30px);
+      }
+      .chart-panel {
+        grid-area: charts;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+      .control-panel {
+        grid-area: controls;
+      }
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .stat-item {
+        margin-bottom: 5px;
+      }
+      .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2ecc71;
+      }
+      .stat-label {
+        color: #95a5a6;
+        font-size: 12px;
+        display: block;
+      }
+      .section-title {
+        font-size: 16px;
+        margin-top: 15px;
+        margin-bottom: 10px;
+        color: #3498db;
+        border-bottom: 1px solid #3498db;
+        padding-bottom: 5px;
+      }
+      #game-canvas {
+        background-color: #2c3e50;
+        border-radius: 4px;
+        width: 50%; /* Reduce to 50% width */
+        height: auto;
+        aspect-ratio: 4/3; /* Maintain the 4:3 aspect ratio to match the grid dimensions */
+        margin: 0 auto; /* Center the canvas */
+        display: block; /* Ensure proper margin centering */
+      }
+      .reset-button {
+        background-color: #e74c3c;
+        color: #ecf0f1;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        transition: background-color 0.3s;
+      }
+      .reset-button:hover {
+        background-color: #c0392b;
+      }
+      .chart-container {
+        width: 100%;
+        height: 250px;
+      }
+      .failure-stats {
+        margin-top: 10px;
+      }
+      .failure-reason {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+      .progress-bar {
+        height: 8px;
+        background-color: #2c3e50;
+        border-radius: 4px;
+        margin-top: 2px;
+      }
+      .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+      }
+      .wall-collision {
+        background-color: #e74c3c;
+      }
+      .self-collision {
+        background-color: #f39c12;
+      }
+      .timeout {
+        background-color: #3498db;
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="game-panel">
-            <h2>Game View</h2>
-            <canvas id="game-canvas" width="800" height="600"></canvas>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="panel game-panel">
+        <h2>Game View</h2>
+        <canvas id="game-canvas"></canvas>
+      </div>
+
+      <div class="panel stats-panel">
+        <h2>Training Statistics</h2>
+
+        <div class="section-title">Current Session</div>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <span class="stat-label">Current Score</span>
+            <span id="current-score" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Episodes</span>
+            <span id="episodes" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Average Score</span>
+            <span id="avg-score" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Max Score</span>
+            <span id="max-score" class="stat-value">0</span>
+          </div>
         </div>
 
-        <div class="stats-panel">
-            <h2>Current Statistics</h2>
-            <div>
-                <p><span class="stat-label">Current Score:</span> <span id="current-score" class="stat-value">0</span></p>
-                <p><span class="stat-label">Average Score:</span> <span id="avg-score" class="stat-value">0</span></p>
-                <p><span class="stat-label">Max Score:</span> <span id="max-score" class="stat-value">0</span></p>
-                <p><span class="stat-label">Episodes:</span> <span id="episodes" class="stat-value">0</span></p>
-                <p><span class="stat-label">Success Rate:</span> <span id="success-rate" class="stat-value">0%</span></p>
-                <p><span class="stat-label">Avg Reward:</span> <span id="avg-reward" class="stat-value">0</span></p>
-                <p><span class="stat-label">Exploration Rate (ε):</span> <span id="epsilon" class="stat-value">0</span></p>
-                <p><span class="stat-label">Learning Rate (α):</span> <span id="learning-rate" class="stat-value">0</span></p>
-                <p><span class="stat-label">Avg Steps/Apple:</span> <span id="steps-per-apple" class="stat-value">0</span></p>
-            </div>
+        <div class="section-title">Performance</div>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <span class="stat-label">Success Rate</span>
+            <span id="success-rate" class="stat-value">0%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Reward</span>
+            <span id="avg-reward" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Steps/Apple</span>
+            <span id="steps-per-apple" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Moving Avg (20)</span>
+            <span id="moving-avg" class="stat-value">0</span>
+          </div>
         </div>
 
-        <div class="control-panel">
-            <h2>Training Controls</h2>
-            <button id="reset-training" class="reset-button">Reset Training</button>
+        <div class="section-title">Learning Parameters</div>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <span class="stat-label">Exploration Rate (ε)</span>
+            <span id="epsilon" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Learning Rate (α)</span>
+            <span id="learning-rate" class="stat-value">0</span>
+          </div>
         </div>
 
-        <div class="chart-container">
-            <div id="score-chart"></div>
-            <div id="learning-rate-chart"></div>
+        <div class="section-title">Failure Analysis</div>
+        <div class="failure-stats">
+          <div class="failure-reason">
+            <span class="stat-label">Wall Collision</span>
+            <span id="wall-collision-percent" class="stat-value">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div
+              id="wall-collision-bar"
+              class="progress-fill wall-collision"
+              style="width: 0%"
+            ></div>
+          </div>
+
+          <div class="failure-reason">
+            <span class="stat-label">Self Collision</span>
+            <span id="self-collision-percent" class="stat-value">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div
+              id="self-collision-bar"
+              class="progress-fill self-collision"
+              style="width: 0%"
+            ></div>
+          </div>
+
+          <div class="failure-reason">
+            <span class="stat-label">Timeout</span>
+            <span id="timeout-percent" class="stat-value">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div id="timeout-bar" class="progress-fill timeout" style="width: 0%"></div>
+          </div>
         </div>
+      </div>
+
+      <div class="panel chart-panel">
+        <div class="chart-container" id="score-chart"></div>
+        <div class="chart-container" id="reward-chart"></div>
+        <div class="chart-container" id="learning-rate-chart"></div>
+        <div class="chart-container" id="failure-reasons-chart"></div>
+      </div>
+
+      <div class="panel control-panel">
+        <h2>Training Controls</h2>
+        <button id="reset-training" class="reset-button">Reset Training</button>
+        <div class="section-title">Session Info</div>
+        <div class="stat-item">
+          <span class="stat-label">Training Duration</span>
+          <span id="training-duration" class="stat-value">00:00:00</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Episodes per Minute</span>
+          <span id="episodes-per-minute" class="stat-value">0</span>
+        </div>
+      </div>
     </div>
 
     <script>
-        const socket = io();
-        let scores = [];
-        let episodes = [];
-        let learningRates = [];
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        const GRID_SIZE = 20;
+      const socket = io()
+      let scores = []
+      let episodes = []
+      let rewards = []
+      let learningRates = []
+      let startTime = new Date()
+      let failureStats = {
+        wallCollision: 0,
+        selfCollision: 0,
+        timeout: 0,
+        total: 0,
+      }
 
-        // Add reset button event listener
-        document.getElementById('reset-training').addEventListener('click', function() {
-            if (confirm('Are you sure you want to reset the training? This will delete all current progress.')) {
-                socket.emit('reset_training');
-            }
-        });
+      // Arrays to track failure reasons over time
+      let wallCollisionHistory = []
+      let selfCollisionHistory = []
+      let timeoutHistory = []
+      let episodesForFailures = []
 
-        function drawGame(gameState) {
-            if (!gameState) return;
+      // Canvas setup
+      const canvas = document.getElementById("game-canvas")
+      const ctx = canvas.getContext("2d")
 
-            // Clear canvas
-            ctx.fillStyle = '#2C3E50';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Grid dimensions from the game constants
+      const GRID_WIDTH = 40 // WINDOW_WIDTH (800) / GRID_SIZE (20)
+      const GRID_HEIGHT = 30 // WINDOW_HEIGHT (600) / GRID_SIZE (20)
+      const GRID_SIZE = 20
 
-            // Draw grid
-            ctx.strokeStyle = '#34495E';
-            for (let x = 0; x < canvas.width; x += GRID_SIZE) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += GRID_SIZE) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
-            }
+      // Set canvas dimensions to match the grid
+      function resizeCanvas() {
+        // Calculate container width (50% of parent width)
+        const parentWidth = canvas.parentElement.clientWidth
+        const containerWidth = Math.min(parentWidth * 0.5, 400) // 50% of parent width, max 400px
 
-            // Draw snake
-            ctx.fillStyle = '#2ECC71';
-            gameState.snake.forEach(([x, y]) => {
-                ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
-            });
+        canvas.width = containerWidth
+        canvas.height = (containerWidth / GRID_WIDTH) * GRID_HEIGHT
+      }
 
-            // Draw apple
-            ctx.fillStyle = '#E74C3C';
-            ctx.fillRect(
-                gameState.apple[0] * GRID_SIZE,
-                gameState.apple[1] * GRID_SIZE,
-                GRID_SIZE - 1,
-                GRID_SIZE - 1
-            );
+      // Initial resize
+      resizeCanvas()
+
+      // Initialize empty charts on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Create empty traces for initial charts
+        const emptyTrace = {
+          x: [],
+          y: [],
+          type: "scatter",
+          mode: "lines",
         }
 
-        socket.on('metrics_update', function(data) {
-            const metrics = JSON.parse(data);
+        const scoreLayout = {
+          title: "Training Progress",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: { title: "Score", gridcolor: "#455565" },
+        }
 
-            // Update stats
-            document.getElementById('current-score').textContent = metrics.current_score;
-            document.getElementById('avg-score').textContent = metrics.avg_score.toFixed(2);
-            document.getElementById('max-score').textContent = metrics.max_score;
-            document.getElementById('episodes').textContent = metrics.episodes;
-            document.getElementById('success-rate').textContent = metrics.success_rate.toFixed(1) + '%';
-            document.getElementById('avg-reward').textContent = metrics.avg_reward.toFixed(2);
-            document.getElementById('epsilon').textContent = metrics.epsilon.toFixed(3);
-            document.getElementById('learning-rate').textContent = metrics.learning_rate.toFixed(6);
-            document.getElementById('steps-per-apple').textContent = metrics.avg_steps_per_apple.toFixed(1);
+        const rewardLayout = {
+          title: "Average Reward",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: { title: "Reward", gridcolor: "#455565" },
+        }
 
-            // Update charts
-            scores.push(metrics.current_score);
-            episodes.push(metrics.episodes);
-            learningRates.push(metrics.learning_rate);
+        const learningRateLayout = {
+          title: "Learning Rate Adaptation",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: {
+            title: "Learning Rate",
+            gridcolor: "#455565",
+            type: "log",
+          },
+        }
 
-            const scoreTrace = {
-                x: episodes,
-                y: scores,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Score',
-                line: {
-                    color: '#2ECC71'
-                }
-            };
+        const failureReasonsLayout = {
+          title: "Failure Reasons Over Time",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: {
+            title: "Percentage",
+            gridcolor: "#455565",
+            tickformat: ".0%",
+            range: [0, 100],
+          },
+          legend: {
+            orientation: "h",
+            y: -0.2,
+          },
+        }
 
-            const learningRateTrace = {
-                x: episodes,
-                y: learningRates,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Learning Rate',
-                yaxis: 'y2',
-                line: {
-                    color: '#E74C3C'
-                }
-            };
+        // Initialize all charts with empty data
+        Plotly.newPlot("score-chart", [emptyTrace], scoreLayout)
+        Plotly.newPlot("reward-chart", [emptyTrace], rewardLayout)
+        Plotly.newPlot("learning-rate-chart", [emptyTrace], learningRateLayout)
+        Plotly.newPlot("failure-reasons-chart", [emptyTrace], failureReasonsLayout)
+      })
 
-            const layout = {
-                grid: {
-                    rows: 2,
-                    columns: 1,
-                    pattern: 'independent'
-                },
-                paper_bgcolor: '#34495E',
-                plot_bgcolor: '#34495E',
-                font: {
-                    color: '#ECF0F1'
-                }
-            };
+      // Add reset button event listener
+      document.getElementById("reset-training").addEventListener("click", function () {
+        if (
+          confirm(
+            "Are you sure you want to reset the training? This will delete all current progress."
+          )
+        ) {
+          socket.emit("reset_training")
+          startTime = new Date() // Reset timer
+          failureStats = { wallCollision: 0, selfCollision: 0, timeout: 0, total: 0 }
+        }
+      })
 
-            const scoreLayout = {
-                title: 'Training Progress',
-                paper_bgcolor: '#34495E',
-                plot_bgcolor: '#34495E',
-                font: {
-                    color: '#ECF0F1'
-                },
-                xaxis: {
-                    title: 'Episode',
-                    gridcolor: '#455565'
-                },
-                yaxis: {
-                    title: 'Score',
-                    gridcolor: '#455565'
-                }
-            };
+      // Update training duration
+      setInterval(function () {
+        const now = new Date()
+        const diff = Math.floor((now - startTime) / 1000)
+        const hours = Math.floor(diff / 3600)
+          .toString()
+          .padStart(2, "0")
+        const minutes = Math.floor((diff % 3600) / 60)
+          .toString()
+          .padStart(2, "0")
+        const seconds = Math.floor(diff % 60)
+          .toString()
+          .padStart(2, "0")
+        document.getElementById("training-duration").textContent = `${hours}:${minutes}:${seconds}`
 
-            const learningRateLayout = {
-                title: 'Learning Rate Adaptation',
-                paper_bgcolor: '#34495E',
-                plot_bgcolor: '#34495E',
-                font: {
-                    color: '#ECF0F1'
-                },
-                xaxis: {
-                    title: 'Episode',
-                    gridcolor: '#455565'
-                },
-                yaxis: {
-                    title: 'Learning Rate',
-                    gridcolor: '#455565',
-                    type: 'log'
-                }
-            };
+        // Calculate episodes per minute
+        if (diff > 0) {
+          const episodesCount = parseInt(document.getElementById("episodes").textContent) || 0
+          const epm = Math.round((episodesCount / diff) * 60)
+          document.getElementById("episodes-per-minute").textContent = epm
+        }
+      }, 1000)
 
-            Plotly.newPlot('score-chart', [scoreTrace], scoreLayout);
-            Plotly.newPlot('learning-rate-chart', [learningRateTrace], learningRateLayout);
-        });
+      function drawGame(gameState) {
+        if (!gameState) return
 
-        socket.on('game_state_update', function(data) {
-            const gameState = JSON.parse(data);
-            drawGame(gameState);
-        });
+        // Clear canvas
+        ctx.fillStyle = "#2C3E50"
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-        socket.on('training_reset', function() {
-            // Clear the chart data
-            scores = [];
-            episodes = [];
-            Plotly.newPlot('score-chart', [{
-                x: [],
-                y: [],
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Score',
-                line: { color: '#2ECC71' }
-            }], {
-                title: 'Training Progress',
-                paper_bgcolor: '#34495E',
-                plot_bgcolor: '#34495E',
-                font: { color: '#ECF0F1' },
-                xaxis: { title: 'Episode', gridcolor: '#455565' },
-                yaxis: { title: 'Score', gridcolor: '#455565' }
-            });
-        });
+        // Calculate cell size based on canvas dimensions
+        const cellWidth = canvas.width / GRID_WIDTH
+        const cellHeight = canvas.height / GRID_HEIGHT
+
+        // Draw grid
+        ctx.strokeStyle = "#34495E"
+        ctx.lineWidth = 0.5 // Thinner grid lines
+        for (let x = 0; x <= GRID_WIDTH; x++) {
+          ctx.beginPath()
+          ctx.moveTo(x * cellWidth, 0)
+          ctx.lineTo(x * cellWidth, canvas.height)
+          ctx.stroke()
+        }
+        for (let y = 0; y <= GRID_HEIGHT; y++) {
+          ctx.beginPath()
+          ctx.moveTo(0, y * cellHeight)
+          ctx.lineTo(canvas.width, y * cellHeight)
+          ctx.stroke()
+        }
+
+        // Draw snake
+        gameState.snake.forEach(([x, y], index) => {
+          // Head is slightly different color
+          if (index === 0) {
+            ctx.fillStyle = "#27ae60"
+          } else {
+            ctx.fillStyle = "#2ECC71"
+          }
+          ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth - 1, cellHeight - 1)
+        })
+
+        // Draw apple
+        ctx.fillStyle = "#E74C3C"
+        ctx.fillRect(
+          gameState.apple[0] * cellWidth,
+          gameState.apple[1] * cellHeight,
+          cellWidth - 1,
+          cellHeight - 1
+        )
+
+        // Draw collision flash if it exists
+        if (
+          gameState.collision_flash &&
+          Array.isArray(gameState.collision_flash) &&
+          gameState.collision_flash.length === 3
+        ) {
+          try {
+            const [x, y, opacity] = gameState.collision_flash
+            // Create a radial gradient for the flash effect
+            const radius = Math.max(cellWidth, cellHeight) * 2
+            const centerX = x * cellWidth + cellWidth / 2
+            const centerY = y * cellHeight + cellHeight / 2
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius)
+
+            // Set gradient colors with opacity
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`)
+            gradient.addColorStop(0.5, `rgba(255, 200, 100, ${opacity * 0.7})`)
+            gradient.addColorStop(1, `rgba(255, 100, 50, ${opacity * 0.3})`)
+
+            // Draw the flash
+            ctx.fillStyle = gradient
+            ctx.beginPath()
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+            ctx.fill()
+          } catch (error) {
+            console.error("Error drawing collision flash:", error)
+          }
+        }
+      }
+
+      socket.on("metrics_update", function (data) {
+        try {
+          const metrics = JSON.parse(data)
+          console.log("Received metrics update:", metrics)
+
+          // Update stats
+          document.getElementById("current-score").textContent = metrics.current_score
+          document.getElementById("avg-score").textContent = metrics.avg_score.toFixed(2)
+          document.getElementById("max-score").textContent = metrics.max_score
+          document.getElementById("episodes").textContent = metrics.episodes
+          document.getElementById("success-rate").textContent =
+            metrics.success_rate.toFixed(1) + "%"
+          document.getElementById("avg-reward").textContent = metrics.avg_reward.toFixed(2)
+          document.getElementById("epsilon").textContent = metrics.epsilon.toFixed(3)
+          document.getElementById("learning-rate").textContent = metrics.learning_rate.toFixed(6)
+          document.getElementById("steps-per-apple").textContent = metrics.avg_steps_per_apple
+            ? metrics.avg_steps_per_apple.toFixed(1)
+            : "0.0"
+          document.getElementById("moving-avg").textContent = metrics.moving_avg.toFixed(2)
+
+          // Update failure stats if provided
+          if (metrics.failure_reason) {
+            failureStats.total++
+            if (metrics.failure_reason === "wall") {
+              failureStats.wallCollision++
+            } else if (metrics.failure_reason === "self") {
+              failureStats.selfCollision++
+            } else if (metrics.failure_reason === "timeout") {
+              failureStats.timeout++
+            }
+
+            // Update failure stats display
+            updateFailureStats()
+
+            // Record episode number for failure tracking
+            if (
+              episodesForFailures.length === 0 ||
+              episodesForFailures[episodesForFailures.length - 1] !== metrics.episodes
+            ) {
+              episodesForFailures.push(metrics.episodes)
+
+              // Calculate percentages for this point in time
+              const total =
+                failureStats.wallCollision + failureStats.selfCollision + failureStats.timeout
+              const wallPercent = total > 0 ? (failureStats.wallCollision / total) * 100 : 0
+              const selfPercent = total > 0 ? (failureStats.selfCollision / total) * 100 : 0
+              const timeoutPercent = total > 0 ? (failureStats.timeout / total) * 100 : 0
+
+              // Add to history arrays
+              wallCollisionHistory.push(wallPercent)
+              selfCollisionHistory.push(selfPercent)
+              timeoutHistory.push(timeoutPercent)
+            }
+          }
+
+          // Update charts data
+          if (metrics.episodes > 0) {
+            // Only add new data points if they don't already exist
+            if (!episodes.includes(metrics.episodes)) {
+              scores.push(metrics.current_score)
+              episodes.push(metrics.episodes)
+              rewards.push(metrics.avg_reward)
+              learningRates.push(metrics.learning_rate)
+
+              // Update charts with new data
+              updateCharts()
+            }
+          }
+        } catch (error) {
+          console.error("Error processing metrics update:", error)
+        }
+      })
+
+      function updateFailureStats() {
+        if (failureStats.total > 0) {
+          const wallPercent = ((failureStats.wallCollision / failureStats.total) * 100).toFixed(1)
+          const selfPercent = ((failureStats.selfCollision / failureStats.total) * 100).toFixed(1)
+          const timeoutPercent = ((failureStats.timeout / failureStats.total) * 100).toFixed(1)
+
+          document.getElementById("wall-collision-percent").textContent = wallPercent + "%"
+          document.getElementById("self-collision-percent").textContent = selfPercent + "%"
+          document.getElementById("timeout-percent").textContent = timeoutPercent + "%"
+
+          document.getElementById("wall-collision-bar").style.width = wallPercent + "%"
+          document.getElementById("self-collision-bar").style.width = selfPercent + "%"
+          document.getElementById("timeout-bar").style.width = timeoutPercent + "%"
+        }
+      }
+
+      function updateCharts() {
+        // Score chart
+        const scoreTrace = {
+          x: episodes,
+          y: scores,
+          type: "scatter",
+          mode: "lines",
+          name: "Score",
+          line: { color: "#2ECC71" },
+        }
+
+        const scoreLayout = {
+          title: "Training Progress",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: { title: "Score", gridcolor: "#455565" },
+        }
+
+        // Reward chart
+        const rewardTrace = {
+          x: episodes,
+          y: rewards,
+          type: "scatter",
+          mode: "lines",
+          name: "Avg Reward",
+          line: { color: "#F39C12" },
+        }
+
+        const rewardLayout = {
+          title: "Average Reward",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: { title: "Reward", gridcolor: "#455565" },
+        }
+
+        // Learning rate chart
+        const learningRateTrace = {
+          x: episodes,
+          y: learningRates,
+          type: "scatter",
+          mode: "lines",
+          name: "Learning Rate",
+          line: { color: "#3498DB" },
+        }
+
+        const learningRateLayout = {
+          title: "Learning Rate Adaptation",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: {
+            title: "Learning Rate",
+            gridcolor: "#455565",
+            type: "log",
+          },
+        }
+
+        // Failure reasons chart
+        const wallCollisionTrace = {
+          x: episodesForFailures,
+          y: wallCollisionHistory,
+          type: "scatter",
+          mode: "lines",
+          name: "Wall Collision",
+          line: { color: "#E74C3C" },
+          stackgroup: "one",
+          groupnorm: "percent",
+        }
+
+        const selfCollisionTrace = {
+          x: episodesForFailures,
+          y: selfCollisionHistory,
+          type: "scatter",
+          mode: "lines",
+          name: "Self Collision",
+          line: { color: "#F39C12" },
+          stackgroup: "one",
+          groupnorm: "percent",
+        }
+
+        const timeoutTrace = {
+          x: episodesForFailures,
+          y: timeoutHistory,
+          type: "scatter",
+          mode: "lines",
+          name: "Timeout",
+          line: { color: "#3498DB" },
+          stackgroup: "one",
+          groupnorm: "percent",
+        }
+
+        const failureReasonsLayout = {
+          title: "Failure Reasons Over Time",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: {
+            title: "Percentage",
+            gridcolor: "#455565",
+            tickformat: ".0%",
+            range: [0, 100],
+          },
+          legend: {
+            orientation: "h",
+            y: -0.2,
+          },
+        }
+
+        Plotly.newPlot("score-chart", [scoreTrace], scoreLayout)
+        Plotly.newPlot("reward-chart", [rewardTrace], rewardLayout)
+        Plotly.newPlot("learning-rate-chart", [learningRateTrace], learningRateLayout)
+        Plotly.newPlot(
+          "failure-reasons-chart",
+          [wallCollisionTrace, selfCollisionTrace, timeoutTrace],
+          failureReasonsLayout
+        )
+      }
+
+      socket.on("game_state_update", function (data) {
+        const gameState = JSON.parse(data)
+        drawGame(gameState)
+      })
+
+      socket.on("training_reset", function () {
+        console.log("Training reset event received")
+
+        // Clear the chart data
+        scores = []
+        episodes = []
+        rewards = []
+        learningRates = []
+        wallCollisionHistory = []
+        selfCollisionHistory = []
+        timeoutHistory = []
+        episodesForFailures = []
+
+        // Reset failure stats
+        failureStats = {
+          wallCollision: 0,
+          selfCollision: 0,
+          timeout: 0,
+          total: 0,
+        }
+
+        // Update failure stats display
+        document.getElementById("wall-collision-percent").textContent = "0%"
+        document.getElementById("self-collision-percent").textContent = "0%"
+        document.getElementById("timeout-percent").textContent = "0%"
+        document.getElementById("wall-collision-bar").style.width = "0%"
+        document.getElementById("self-collision-bar").style.width = "0%"
+        document.getElementById("timeout-bar").style.width = "0%"
+
+        // Redraw the charts with empty data
+        const emptyTrace = {
+          x: [],
+          y: [],
+          type: "scatter",
+          mode: "lines",
+        }
+
+        const scoreLayout = {
+          title: "Training Progress",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: { title: "Score", gridcolor: "#455565" },
+        }
+
+        const rewardLayout = {
+          title: "Average Reward",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: { title: "Reward", gridcolor: "#455565" },
+        }
+
+        const learningRateLayout = {
+          title: "Learning Rate Adaptation",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: {
+            title: "Learning Rate",
+            gridcolor: "#455565",
+            type: "log",
+          },
+        }
+
+        Plotly.newPlot("score-chart", [emptyTrace], scoreLayout)
+        Plotly.newPlot("reward-chart", [emptyTrace], rewardLayout)
+        Plotly.newPlot("learning-rate-chart", [emptyTrace], learningRateLayout)
+        Plotly.newPlot("failure-reasons-chart", [emptyTrace], {
+          title: "Failure Reasons Over Time",
+          paper_bgcolor: "#34495E",
+          plot_bgcolor: "#34495E",
+          font: { color: "#ECF0F1" },
+          margin: { l: 50, r: 30, t: 40, b: 40 },
+          xaxis: { title: "Episode", gridcolor: "#455565" },
+          yaxis: {
+            title: "Percentage",
+            gridcolor: "#455565",
+            tickformat: ".0%",
+            range: [0, 100],
+          },
+        })
+
+        // Clear the stats display
+        document.getElementById("current-score").textContent = "0"
+        document.getElementById("avg-score").textContent = "0.0"
+        document.getElementById("max-score").textContent = "0"
+        document.getElementById("episodes").textContent = "0"
+        document.getElementById("success-rate").textContent = "0.0%"
+        document.getElementById("avg-reward").textContent = "0.0"
+        document.getElementById("epsilon").textContent = "0.1"
+        document.getElementById("learning-rate").textContent = "0.001"
+        document.getElementById("steps-per-apple").textContent = "0.0"
+        document.getElementById("moving-avg").textContent = "0.0"
+        document.getElementById("episodes-per-minute").textContent = "0"
+
+        // Reset timer
+        startTime = new Date()
+
+        // Clear any cached game state
+        drawGame({ snake: [], apple: [0, 0] })
+
+        console.log("UI reset complete")
+      })
+
+      // Handle window resize
+      window.addEventListener("resize", function () {
+        resizeCanvas()
+        updateCharts()
+      })
     </script>
-</body>
+  </body>
 </html>

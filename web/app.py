@@ -1,10 +1,10 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-from flask_sqlalchemy import SQLAlchemy
 import json
 import numpy as np
 import os
 import logging
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -12,18 +12,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 socketio = SocketIO(app)
-
-# Configure database
-logger.info("Configuring database connection...")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_recycle': 300,
-    'pool_pre_ping': True
-}
-
-# Initialize SQLAlchemy with the Flask app
-db = SQLAlchemy(app)
 
 @app.route('/')
 def index():
@@ -44,13 +32,21 @@ def handle_connect():
 @socketio.on('reset_training')
 def handle_reset():
     try:
-        with app.app_context():
-            # Clear all tables
-            db.session.execute(db.text('TRUNCATE TABLE q_table_entries, training_metrics RESTART IDENTITY CASCADE'))
-            db.session.commit()
-            logger.info("Training data reset successfully")
-            socketio.emit('training_reset')
-            return True
+        logger.info("Reset training requested from web interface")
+
+        # Set the reset flag in main.py
+        from main import handle_training_reset
+        handle_training_reset()
+        logger.info("Reset flag set in main.py")
+
+        # Wait briefly to ensure the training loop has time to process the reset
+        time.sleep(0.5)
+
+        # Notify clients that training has been reset
+        socketio.emit('training_reset')
+        logger.info("UI reset signal sent")
+
+        return True
     except Exception as e:
         logger.error(f"Error resetting training data: {e}")
         return False

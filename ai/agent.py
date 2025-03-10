@@ -89,8 +89,53 @@ class QLearningAgent:
             self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 
     def load_state(self, saved_state):
-        if saved_state and 'q_table' in saved_state:
-            self.q_table = saved_state['q_table']
+        """Load agent state from a saved state dictionary"""
+        try:
+            # Load the Q-table
+            if 'q_table' in saved_state:
+                # Convert any string keys back to proper format
+                q_table = {}
+                for state_key_str, q_values in saved_state['q_table'].items():
+                    # If the key is stored as a string representation of a tuple, convert it back
+                    try:
+                        if state_key_str.startswith('(') and state_key_str.endswith(')'):
+                            state_key = eval(state_key_str)
+                        else:
+                            state_key = state_key_str
+                    except:
+                        state_key = state_key_str
+
+                    # Convert values to numpy array if they're a list
+                    if isinstance(q_values, list):
+                        q_table[state_key] = np.array(q_values)
+                    else:
+                        q_table[state_key] = q_values
+
+                self.q_table = q_table
+
+            # Load epsilon and learning rate if available
             self.epsilon = saved_state.get('epsilon', self.epsilon)
             self.learning_rate = saved_state.get('learning_rate', self.learning_rate)
             print(f"Loaded Q-table with {len(self.q_table)} states, epsilon: {self.epsilon}, learning rate: {self.learning_rate}", flush=True)
+            return True
+        except Exception as e:
+            print(f"Error loading agent state: {e}", flush=True)
+            return False
+
+    def reset(self):
+        """
+        Reset the agent to initial state.
+        This clears all learning history and sets parameters back to default values.
+        """
+        # Clear the Q-table and reset all parameters to initial values
+        self.q_table = {}
+        self.epsilon = 0.1
+        self.learning_rate = 0.001
+        self.gamma = 0.9
+        self.epsilon_decay = 0.998
+        self.epsilon_min = 0.01
+        self.learning_rate_min = 0.0001
+        self.min_exploration_episodes = 1000
+
+        print("Agent reset to initial state with empty Q-table", flush=True)
+        return True
