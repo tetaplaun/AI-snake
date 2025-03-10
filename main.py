@@ -16,7 +16,7 @@ def run_training():
     game = SnakeGame()
 
     # Initialize DQN agent (replaces Q-learning agent)
-    agent = DQNAgent(state_size=12, action_size=3)
+    agent = DQNAgent(state_size=11, action_size=3)  # Updated state_size to match actual dimensions
 
     # Initialize state manager and metrics visualizer
     state_manager = StateManager()
@@ -48,23 +48,28 @@ def run_training():
             print(f"\nEpisode {episodes} started", flush=True)
 
             while not done:
-                # Get action from agent
-                action = agent.get_action(state)
-                steps += 1
+                try:
+                    # Get action from agent
+                    action = agent.get_action(state)
+                    steps += 1
 
-                # Execute action and get reward
-                reward, done = game.step(action)
+                    # Execute action and get reward
+                    reward, done = game.step(action)
 
-                # Get new state
-                next_state = game.get_state()
+                    # Get new state
+                    next_state = game.get_state()
 
-                # Train agent
-                agent.train(state, action, reward, next_state, done)
+                    # Train agent
+                    agent.train(state, action, reward, next_state, done)
 
-                state = next_state
+                    state = next_state
 
-                # Add small delay to make it observable
-                time.sleep(0.01)
+                    # Add small delay to make it observable
+                    time.sleep(0.01)
+
+                except Exception as e:
+                    print(f"Error during episode step: {e}", flush=True)
+                    break
 
             # Update and display metrics
             print(f"Episode {episodes} finished - Score: {game.score}, Steps: {steps}", flush=True)
