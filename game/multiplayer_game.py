@@ -38,15 +38,26 @@ class MultiplayerSnakeGame:
     
     def _generate_apple(self, snake, other_snake=None):
         """Generate a new apple that's not on any snake body"""
-        forbidden_positions = set(snake)
+        forbidden_positions = set(tuple(pos) for pos in snake)
         if other_snake:
-            forbidden_positions.update(other_snake)
+            forbidden_positions.update(tuple(pos) for pos in other_snake)
             
-        while True:
+        # Generate new apple position
+        for _ in range(100):  # Try 100 times to avoid infinite loop
             apple = (np.random.randint(0, GRID_WIDTH),
                     np.random.randint(0, GRID_HEIGHT))
             if apple not in forbidden_positions:
                 return apple
+                
+        # Fallback if we couldn't find an empty spot (very rare)
+        for x in range(GRID_WIDTH):
+            for y in range(GRID_HEIGHT):
+                pos = (x, y)
+                if pos not in forbidden_positions:
+                    return pos
+                    
+        # Extreme fallback (only if grid is completely full)
+        return (GRID_WIDTH // 2, GRID_HEIGHT // 2)
 
     def _get_distance_to_apple(self, head, apple):
         return abs(head[0] - apple[0]) + abs(head[1] - apple[1])

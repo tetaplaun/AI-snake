@@ -22,8 +22,8 @@ FONT_NAME = "monospace"
 FONT_SIZE = 16
 
 # Rewards
-REWARD_APPLE = 20.0  # Increased reward for getting apple
-REWARD_MOVE = -0.01  # Smaller penalty for moving
-REWARD_DEATH = -30.0  # Increased penalty for death
-REWARD_CLOSER_TO_APPLE = 0.1  # New reward for moving closer to apple
-REWARD_AWAY_FROM_APPLE = -0.1  # New penalty for moving away from apple
+REWARD_APPLE = 25.0  # Increased reward for getting apple
+REWARD_MOVE = 0.0  # No penalty for moving
+REWARD_DEATH = -30.0  # Same penalty for death 
+REWARD_CLOSER_TO_APPLE = 0.2  # Increased reward for moving closer to apple
+REWARD_AWAY_FROM_APPLE = -0.1  # Same penalty for moving away from apple

@@ -42,7 +42,7 @@ class CompetitionManager:
         self.agent1_scores = []
         self.agent2_scores = []
         
-    def run_competition(self, num_rounds=10, max_steps_per_round=1000):
+    def run_competition(self, num_rounds=10, max_steps_per_round=2000):
         """
         Run a competition between the two agents for a specified number of rounds
         """
@@ -86,7 +86,7 @@ class CompetitionManager:
                             steps += 1
                             
                             # Small delay to make visualization smoother
-                            time.sleep(0.05)
+                            time.sleep(0.1)  # Slowed down a bit for better visualization
                         except Exception as e:
                             logger.error(f"Error during game step: {e}")
                             # Continue to next step if there's an error

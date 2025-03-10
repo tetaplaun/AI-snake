@@ -146,9 +146,9 @@ def run_competition():
         # Create competition manager
         competition = CompetitionManager(agent1, agent2)
         
-        # Run the competition (5 rounds by default - smaller for testing)
+        # Run the competition with more rounds and steps for a better experience
         logger.info("Starting competition execution...")
-        competition.run_competition(num_rounds=5)
+        competition.run_competition(num_rounds=10, max_steps_per_round=2000)
         
         # Competition complete
         logger.info("Competition completed successfully")
