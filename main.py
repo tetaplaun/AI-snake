@@ -1,11 +1,13 @@
 import sys
 import time
+import threading
 from game.snake_game import SnakeGame
 from ai.agent import QLearningAgent
 from utils.visualization import MetricsVisualizer
 from utils.state_manager import StateManager
+from web.app import app, socketio
 
-def main():
+def run_training():
     print("Starting Snake AI Training...", flush=True)
     print("-" * 50, flush=True)
 
@@ -82,4 +84,10 @@ def main():
         sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    # Start training in a separate thread
+    training_thread = threading.Thread(target=run_training)
+    training_thread.daemon = True
+    training_thread.start()
+
+    # Start the Flask server
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
