@@ -164,6 +164,14 @@ def run_training():
                         failure_reason
                     )
 
+                    # Log specific information about the failure reason
+                    if failure_reason == "self":
+                        logger.info(f"Episode {episodes} ended due to SELF COLLISION - Applied stronger penalty")
+                    elif failure_reason == "wall":
+                        logger.info(f"Episode {episodes} ended due to wall collision")
+                    elif failure_reason == "timeout":
+                        logger.info(f"Episode {episodes} ended due to timeout")
+
                     # Save state periodically if not in reset
                     if episodes % save_interval == 0 and not training_reset_requested:
                         try:

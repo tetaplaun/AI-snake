@@ -201,36 +201,36 @@
             <span>Wall Collisions:</span>
             <span id="wall-collisions">0</span>
           </div>
-          <div class="failure-reason">
-            <span class="stat-label">Wall Collision</span>
-            <span id="wall-collision-percent" class="stat-value">0%</span>
-          </div>
           <div class="progress-bar">
-            <div
-              id="wall-collision-bar"
-              class="progress-fill wall-collision"
-              style="width: 0%"
-            ></div>
+            <div id="wall-failure-bar" class="progress-fill wall-collision" style="width: 0%"></div>
           </div>
 
           <div class="failure-reason">
-            <span class="stat-label">Self Collision</span>
-            <span id="self-collision-percent" class="stat-value">0%</span>
+            <span>Self Collisions:</span>
+            <span id="self-collisions">0</span>
           </div>
           <div class="progress-bar">
-            <div
-              id="self-collision-bar"
-              class="progress-fill self-collision"
-              style="width: 0%"
-            ></div>
+            <div id="self-failure-bar" class="progress-fill self-collision" style="width: 0%"></div>
           </div>
 
           <div class="failure-reason">
-            <span class="stat-label">Timeout</span>
-            <span id="timeout-percent" class="stat-value">0%</span>
+            <span>Timeouts:</span>
+            <span id="timeouts">0</span>
           </div>
           <div class="progress-bar">
-            <div id="timeout-bar" class="progress-fill timeout" style="width: 0%"></div>
+            <div id="timeout-failure-bar" class="progress-fill timeout" style="width: 0%"></div>
+          </div>
+
+          <div class="section-title">Self Collision Analysis</div>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <span class="stat-label">Self Collision %</span>
+              <span id="self-collision-percent" class="stat-value">0%</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Recent Rate (last 100)</span>
+              <span id="recent-self-collision-rate" class="stat-value">0%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -799,13 +799,9 @@
           const selfPercent = ((failureStats.selfCollision / failureStats.total) * 100).toFixed(1)
           const timeoutPercent = ((failureStats.timeout / failureStats.total) * 100).toFixed(1)
 
-          document.getElementById("wall-collision-percent").textContent = wallPercent + "%"
-          document.getElementById("self-collision-percent").textContent = selfPercent + "%"
-          document.getElementById("timeout-percent").textContent = timeoutPercent + "%"
-
-          document.getElementById("wall-collision-bar").style.width = wallPercent + "%"
-          document.getElementById("self-collision-bar").style.width = selfPercent + "%"
-          document.getElementById("timeout-bar").style.width = timeoutPercent + "%"
+          document.getElementById("wall-failure-bar").style.width = wallPercent + "%"
+          document.getElementById("self-failure-bar").style.width = selfPercent + "%"
+          document.getElementById("timeout-failure-bar").style.width = timeoutPercent + "%"
         }
       }
 
@@ -882,8 +878,6 @@
           mode: "lines",
           name: "Wall Collision",
           line: { color: "#E74C3C" },
-          stackgroup: "one",
-          groupnorm: "percent",
         }
 
         const selfCollisionTrace = {
@@ -893,8 +887,6 @@
           mode: "lines",
           name: "Self Collision",
           line: { color: "#F39C12" },
-          stackgroup: "one",
-          groupnorm: "percent",
         }
 
         const timeoutTrace = {
@@ -904,8 +896,6 @@
           mode: "lines",
           name: "Timeout",
           line: { color: "#3498DB" },
-          stackgroup: "one",
-          groupnorm: "percent",
         }
 
         const failureReasonsLayout = {
@@ -983,14 +973,15 @@
         // Reset wall collision counter
         wallCollisionCount = 0
         document.getElementById("wall-collisions").textContent = "0"
+        document.getElementById("self-collisions").textContent = "0"
+        document.getElementById("timeouts").textContent = "0"
+        document.getElementById("self-collision-percent").textContent = "0%"
+        document.getElementById("recent-self-collision-rate").textContent = "0%"
 
         // Update failure stats display
-        document.getElementById("wall-collision-percent").textContent = "0%"
-        document.getElementById("self-collision-percent").textContent = "0%"
-        document.getElementById("timeout-percent").textContent = "0%"
-        document.getElementById("wall-collision-bar").style.width = "0%"
-        document.getElementById("self-collision-bar").style.width = "0%"
-        document.getElementById("timeout-bar").style.width = "0%"
+        document.getElementById("wall-failure-bar").style.width = "0%"
+        document.getElementById("self-failure-bar").style.width = "0%"
+        document.getElementById("timeout-failure-bar").style.width = "0%"
 
         // Redraw the charts with empty data
         const emptyTrace = {
@@ -1079,6 +1070,122 @@
         resizeCanvas()
         updateCharts()
       })
+
+      // Add new socket handler for the new training_stats event
+      socket.on("training_stats", function (data) {
+        try {
+          const stats = JSON.parse(data)
+          updateTrainingStats(stats)
+        } catch (e) {
+          console.error("Error parsing training stats:", e)
+        }
+      })
+
+      function updateTrainingStats(stats) {
+        // Update basic training stats
+        document.getElementById("episodes").textContent = stats.total_episodes
+        document.getElementById("max-score").textContent = stats.max_score
+        document.getElementById("avg-score").textContent = stats.avg_score.toFixed(2)
+        document.getElementById("success-rate").textContent = stats.success_rate.toFixed(2) + "%"
+        document.getElementById("epsilon").textContent = stats.current_epsilon.toFixed(5)
+        document.getElementById("learning-rate").textContent =
+          stats.current_learning_rate.toFixed(5)
+
+        // Add current score if available (we don't have this in the new format)
+        if (stats.current_score !== undefined) {
+          document.getElementById("current-score").textContent = stats.current_score
+        }
+
+        // Update additional metrics from the old format if available
+        if (stats.avg_reward !== undefined) {
+          document.getElementById("avg-reward").textContent = stats.avg_reward.toFixed(2)
+        }
+
+        if (stats.moving_avg !== undefined) {
+          document.getElementById("moving-avg").textContent = stats.moving_avg.toFixed(2)
+        }
+
+        // Update self-collision specific stats
+        const selfCollisions = stats.failure_counts.self || 0
+        document.getElementById("self-collisions").textContent = selfCollisions
+        document.getElementById("wall-collisions").textContent = stats.failure_counts.wall || 0
+        document.getElementById("timeouts").textContent = stats.failure_counts.timeout || 0
+
+        const selfCollisionPercent = stats.failure_percentages.self || 0
+        document.getElementById("self-collision-percent").textContent =
+          selfCollisionPercent.toFixed(2) + "%"
+
+        document.getElementById("recent-self-collision-rate").textContent =
+          stats.recent_self_collision_rate.toFixed(2) + "%"
+
+        // Update failure breakdown bars
+        updateFailureBar("wall-failure-bar", stats.failure_percentages.wall || 0, "Wall")
+        updateFailureBar("self-failure-bar", stats.failure_percentages.self || 0, "Self")
+        updateFailureBar("timeout-failure-bar", stats.failure_percentages.timeout || 0, "Timeout")
+
+        // Update chart data arrays with historical data
+        if (stats.episode_numbers && stats.episode_numbers.length > 0) {
+          // Use the provided episode numbers
+          episodes = stats.episode_numbers
+
+          // Update scores array if we have moving average scores
+          if (stats.moving_avg_scores && stats.moving_avg_scores.length > 0) {
+            scores = stats.moving_avg_scores
+          }
+
+          // Use historical reward data if available
+          if (stats.rewards_history && stats.rewards_history.length > 0) {
+            rewards = stats.rewards_history
+          } else if (stats.avg_score) {
+            // Fallback to placeholder data
+            rewards = new Array(episodes.length).fill(stats.avg_score)
+          }
+
+          // Use historical learning rate data if available
+          if (stats.learning_rates_history && stats.learning_rates_history.length > 0) {
+            learningRates = stats.learning_rates_history
+          } else {
+            // Fallback to placeholder data
+            learningRates = new Array(episodes.length).fill(stats.current_learning_rate)
+          }
+
+          // Update failure data for failure reasons chart
+          if (
+            stats.failure_episodes &&
+            stats.failure_episodes.length > 0 &&
+            stats.wall_pct_history &&
+            stats.self_pct_history &&
+            stats.timeout_pct_history
+          ) {
+            episodesForFailures = stats.failure_episodes
+            wallCollisionHistory = stats.wall_pct_history
+            selfCollisionHistory = stats.self_pct_history
+            timeoutHistory = stats.timeout_pct_history
+          } else {
+            // Fallback to placeholder data
+            episodesForFailures = episodes
+            const wallPercent = stats.failure_percentages.wall || 0
+            const selfPercent = stats.failure_percentages.self || 0
+            const timeoutPercent = stats.failure_percentages.timeout || 0
+
+            wallCollisionHistory = new Array(episodes.length).fill(wallPercent)
+            selfCollisionHistory = new Array(episodes.length).fill(selfPercent)
+            timeoutHistory = new Array(episodes.length).fill(timeoutPercent)
+          }
+
+          // Update charts with the new data
+          updateCharts()
+        }
+      }
+
+      function updateFailureBar(id, percentage, label) {
+        const bar = document.getElementById(id)
+        if (bar) {
+          bar.style.width = percentage + "%"
+          bar.setAttribute("aria-valuenow", percentage)
+          bar.textContent = label + " (" + percentage.toFixed(1) + "%)"
+        }
+      }
     </script>
   </body>
 </html>

@@ -203,7 +203,11 @@ class SnakeGame:
 
         # Check collision
         if self._is_collision(new_head):
-            return REWARD_DEATH, True
+            # Apply different penalty based on collision type
+            if self.failure_reason == "self":
+                return REWARD_SELF_COLLISION, True
+            else:
+                return REWARD_DEATH, True
 
         # Add new head
         self.snake = np.vstack([new_head, self.snake])
