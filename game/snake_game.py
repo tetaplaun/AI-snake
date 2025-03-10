@@ -24,8 +24,8 @@ class SnakeGame:
             pos = (np.random.randint(0, GRID_WIDTH),
                   np.random.randint(0, GRID_HEIGHT))
 
-            # Don't place obstacles too close to the starting position
-            if abs(pos[0] - center[0]) + abs(pos[1] - center[1]) > 5:
+            # Increased minimum distance from starting position from 5 to 8
+            if abs(pos[0] - center[0]) + abs(pos[1] - center[1]) > 8:
                 obstacles.add(pos)
 
         return obstacles
@@ -67,8 +67,8 @@ class SnakeGame:
         obstacle_d = nearest_obstacle[1] > head[1]
 
         return np.array(danger + [dir_l, dir_r, dir_u, dir_d, 
-                                apple_l, apple_r, apple_u, apple_d,
-                                obstacle_l, obstacle_r, obstacle_u, obstacle_d])
+                                   apple_l, apple_r, apple_u, apple_d,
+                                   obstacle_l, obstacle_r, obstacle_u, obstacle_d])
 
     def _find_nearest_obstacle(self, pos):
         if not self.obstacles:

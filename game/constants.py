@@ -12,7 +12,7 @@ WINDOW_HEIGHT = 600
 GRID_SIZE = 20
 GRID_WIDTH = WINDOW_WIDTH // GRID_SIZE
 GRID_HEIGHT = WINDOW_HEIGHT // GRID_SIZE
-NUM_OBSTACLES = 10  # Number of obstacles in the game
+NUM_OBSTACLES = 5  # Reduced from 10 to 5 obstacles
 
 # AI settings
 LEARNING_RATE = 0.1
