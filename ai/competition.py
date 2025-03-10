@@ -85,8 +85,8 @@ class CompetitionManager:
                             
                             steps += 1
                             
-                            # Small delay to make visualization smoother
-                            time.sleep(0.1)  # Slowed down a bit for better visualization
+                            # Small delay to make visualization smoother but still responsive
+                            time.sleep(0.05)  # Faster than before for more engaging gameplay
                         except Exception as e:
                             logger.error(f"Error during game step: {e}")
                             # Continue to next step if there's an error

@@ -2,6 +2,7 @@ import sys
 import time
 import threading
 import logging
+import numpy as np
 from game.snake_game import SnakeGame
 from game.multiplayer_game import MultiplayerSnakeGame
 from ai.agent import QLearningAgent
@@ -162,7 +163,8 @@ def run_competition():
         
         # Run the competition with more rounds and steps for a better experience
         logger.info("Starting competition execution...")
-        competition.run_competition(num_rounds=10, max_steps_per_round=2000)
+        # More rounds, reasonable step limit for engaging matches
+        competition.run_competition(num_rounds=15, max_steps_per_round=3000)
         
         # Competition complete
         logger.info("Competition completed successfully")
@@ -176,12 +178,20 @@ def run_competition():
 # Socket.IO event handler for starting competition
 @socketio.on('start_competition')
 def handle_start_competition():
+    global competition_in_progress
     if not competition_in_progress:
+        # Notify frontend that competition is starting
+        competition_in_progress = True  # Set flag before starting thread
+        socketio.emit('competition_started')
+        
         # Start competition in a separate thread
         competition_thread = threading.Thread(target=run_competition)
         competition_thread.daemon = True
         competition_thread.start()
+        
+        logger.info("Competition started and thread launched")
         return True
+    logger.info("Competition already in progress, ignoring request")
     return False
 
 if __name__ == "__main__":
