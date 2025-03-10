@@ -10,4 +10,15 @@ dependencies = [
     "numpy>=2.2.3",
     "pygame>=2.6.1",
     "python-socketio>=5.12.1",
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
 ]
+
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
