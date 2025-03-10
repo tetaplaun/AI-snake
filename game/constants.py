@@ -24,7 +24,7 @@ FONT_NAME = "monospace"
 FONT_SIZE = 16
 
 # Rewards
-REWARD_APPLE = 15  # Increased from 10 to make food more attractive
-REWARD_MOVE = -0.01  # Reduced penalty for moving from -0.1
+REWARD_APPLE = 25  # Increased from 15 to make food more attractive
+REWARD_MOVE = -0.001  # Minimal penalty for moving
 REWARD_DEATH = -10
 REWARD_OBSTACLE = -10  # Same penalty as death for hitting obstacles

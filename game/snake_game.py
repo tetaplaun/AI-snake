@@ -24,18 +24,33 @@ class SnakeGame:
             pos = (np.random.randint(0, GRID_WIDTH),
                   np.random.randint(0, GRID_HEIGHT))
 
-            # Increased minimum distance from starting position from 5 to 8
-            if abs(pos[0] - center[0]) + abs(pos[1] - center[1]) > 8:
-                obstacles.add(pos)
+            # Increased minimum distance from starting position from 8 to 10
+            if abs(pos[0] - center[0]) + abs(pos[1] - center[1]) > 10:
+                # Check if adding this obstacle would create a wall
+                if not self._would_block_paths(pos, obstacles):
+                    obstacles.add(pos)
 
         return obstacles
+
+    def _would_block_paths(self, new_obstacle, existing_obstacles):
+        # Simple check to prevent obstacles from forming walls
+        # by ensuring no more than 2 obstacles are adjacent
+        adjacent_count = 0
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            adj_pos = (new_obstacle[0] + dx, new_obstacle[1] + dy)
+            if adj_pos in existing_obstacles:
+                adjacent_count += 1
+        return adjacent_count >= 2
 
     def _generate_apple(self):
         while True:
             apple = (np.random.randint(0, GRID_WIDTH),
                     np.random.randint(0, GRID_HEIGHT))
             if apple not in self.snake and apple not in self.obstacles:
-                return apple
+                # Ensure the apple is not too close to obstacles
+                if not any(abs(apple[0] - obs[0]) + abs(apple[1] - obs[1]) < 3 
+                         for obs in self.obstacles):
+                    return apple
 
     def get_state(self):
         head = self.snake[0]
