@@ -12,26 +12,31 @@ class MultiplayerSnakeGame:
         self.reset()
 
     def reset(self):
-        # Initialize snakes at different positions: one at 1/4, one at 3/4 of the grid
-        self.snake1 = deque([((GRID_WIDTH // 4), GRID_HEIGHT // 2)])
-        self.snake2 = deque([((GRID_WIDTH * 3) // 4, GRID_HEIGHT // 2)])
+        # Initialize snakes at different positions with starting length of 2
+        self.snake1 = deque([
+            ((GRID_WIDTH // 4), GRID_HEIGHT // 2),
+            ((GRID_WIDTH // 4) - 1, GRID_HEIGHT // 2)
+        ])
+        
+        self.snake2 = deque([
+            ((GRID_WIDTH * 3) // 4, GRID_HEIGHT // 2),
+            ((GRID_WIDTH * 3) // 4 + 1, GRID_HEIGHT // 2)
+        ])
         
         # Snake 1 starts moving right, Snake 2 starts moving left
         self.direction1 = np.array([1, 0])
         self.direction2 = np.array([-1, 0])
         
-        # Each snake has its own apple
-        self.apple1 = self._generate_apple(self.snake1)
-        self.apple2 = self._generate_apple(self.snake2)
+        # Generate fixed apples in specific areas away from snakes
+        # Place apples in designated areas to avoid overlap
+        self.apple1 = (GRID_WIDTH // 5, GRID_HEIGHT // 5)
+        self.apple2 = (GRID_WIDTH * 4 // 5, GRID_HEIGHT * 4 // 5)
         
         self.score1 = 0
         self.score2 = 0
         
         self.prev_distance_to_apple1 = self._get_distance_to_apple(self.snake1[0], self.apple1)
         self.prev_distance_to_apple2 = self._get_distance_to_apple(self.snake2[0], self.apple2)
-        
-        # Send initial game state to frontend - skipping broadcast for now
-        # Will be handled by the competition manager
         
         # Return both snake states
         return self.get_state1(), self.get_state2()
@@ -201,10 +206,18 @@ class MultiplayerSnakeGame:
         if new_head == apple:
             if snake_name == 'snake1':
                 self.score1 += 1
-                self.apple1 = self._generate_apple(self.snake1, self.snake2)
+                # Generate new apple in a fixed quadrant instead of random
+                if self.score1 % 2 == 0:  # Even score
+                    self.apple1 = (GRID_WIDTH // 5, GRID_HEIGHT * 4 // 5)
+                else:  # Odd score
+                    self.apple1 = (GRID_WIDTH * 2 // 5, GRID_HEIGHT // 5)
             else:
                 self.score2 += 1
-                self.apple2 = self._generate_apple(self.snake2, self.snake1)
+                # Generate new apple in a fixed quadrant instead of random
+                if self.score2 % 2 == 0:  # Even score
+                    self.apple2 = (GRID_WIDTH * 4 // 5, GRID_HEIGHT // 5)
+                else:  # Odd score
+                    self.apple2 = (GRID_WIDTH * 3 // 5, GRID_HEIGHT * 4 // 5)
                 
             return REWARD_APPLE, False
         else:

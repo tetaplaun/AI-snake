@@ -132,16 +132,20 @@ def run_competition():
         
         # Create primary agent (either from saved state or new)
         agent1 = QLearningAgent(state_size=27, action_size=3)
-        if saved_state:
-            agent1.load_state(saved_state)
-            logger.info("Loaded previously trained agent for competition")
-        else:
-            logger.info("No saved state found, using a new agent for competition")
         
-        # Create a challenger agent (new with some randomness)
+        # Create second agent with same model
         agent2 = QLearningAgent(state_size=27, action_size=3)
-        # Make agent2 more exploratory for variety
-        agent2.epsilon = 0.2
+        
+        if saved_state:
+            # Load the same trained state into both agents
+            agent1.load_state(saved_state)
+            agent2.load_state(saved_state) 
+            logger.info("Loaded trained model for both competing agents")
+        else:
+            logger.info("No saved state found, using new agents for competition")
+            
+        # Add slight variation to agent2's decision-making to create differences
+        agent2.epsilon = 0.15  # Slightly more exploration than agent1
         
         # Create competition manager
         competition = CompetitionManager(agent1, agent2)
