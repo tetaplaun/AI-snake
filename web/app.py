@@ -27,6 +27,20 @@ def index():
 def handle_connect():
     print('Client connected', flush=True)
 
+@socketio.on('reset_training')
+def handle_reset():
+    try:
+        with app.app_context():
+            # Clear all tables
+            db.session.execute(db.text('TRUNCATE TABLE q_table_entries, training_metrics RESTART IDENTITY CASCADE'))
+            db.session.commit()
+            print("Training data reset successfully", flush=True)
+            socketio.emit('training_reset')
+            return True
+    except Exception as e:
+        print(f"Error resetting training data: {e}", flush=True)
+        return False
+
 def broadcast_metrics(metrics):
     socketio.emit('metrics_update', json.dumps(metrics))
 

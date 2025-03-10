@@ -51,6 +51,27 @@
             background-color: #2C3E50;
             border-radius: 4px;
         }
+        .control-panel {
+            background-color: #34495E;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            grid-column: 2;
+        }
+        .reset-button {
+            background-color: #E74C3C;
+            color: #ECF0F1;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        .reset-button:hover {
+            background-color: #C0392B;
+        }
     </style>
 </head>
 <body>
@@ -74,6 +95,11 @@
             </div>
         </div>
 
+        <div class="control-panel">
+            <h2>Training Controls</h2>
+            <button id="reset-training" class="reset-button">Reset Training</button>
+        </div>
+
         <div class="chart-container">
             <div id="score-chart"></div>
         </div>
@@ -86,6 +112,13 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const GRID_SIZE = 20;
+
+        // Add reset button event listener
+        document.getElementById('reset-training').addEventListener('click', function() {
+            if (confirm('Are you sure you want to reset the training? This will delete all current progress.')) {
+                socket.emit('reset_training');
+            }
+        });
 
         function drawGame(gameState) {
             if (!gameState) return;
@@ -176,6 +209,27 @@
         socket.on('game_state_update', function(data) {
             const gameState = JSON.parse(data);
             drawGame(gameState);
+        });
+
+        socket.on('training_reset', function() {
+            // Clear the chart data
+            scores = [];
+            episodes = [];
+            Plotly.newPlot('score-chart', [{
+                x: [],
+                y: [],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Score',
+                line: { color: '#2ECC71' }
+            }], {
+                title: 'Training Progress',
+                paper_bgcolor: '#34495E',
+                plot_bgcolor: '#34495E',
+                font: { color: '#ECF0F1' },
+                xaxis: { title: 'Episode', gridcolor: '#455565' },
+                yaxis: { title: 'Score', gridcolor: '#455565' }
+            });
         });
     </script>
 </body>
