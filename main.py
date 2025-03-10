@@ -144,8 +144,18 @@ def run_competition():
         else:
             logger.info("No saved state found, using new agents for competition")
             
-        # Add slight variation to agent2's decision-making to create differences
-        agent2.epsilon = 0.15  # Slightly more exploration than agent1
+        # Add significant variations to agent2's behavior to create more diverse gameplay
+        agent2.epsilon = 0.3    # More exploration - will try more random moves
+        
+        # Modify how agent2 values different rewards to create different strategies
+        # This will make it prioritize different actions than agent1
+        for state in agent2.q_table:
+            actions = agent2.q_table[state]
+            # Randomly adjust some Q-values to create different behavior
+            for i in range(len(actions)):
+                # Apply a random adjustment within a certain range
+                adjustment = np.random.uniform(-0.2, 0.5)
+                actions[i] += adjustment
         
         # Create competition manager
         competition = CompetitionManager(agent1, agent2)

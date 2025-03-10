@@ -12,31 +12,45 @@ class MultiplayerSnakeGame:
         self.reset()
 
     def reset(self):
-        # Initialize snakes at different positions with starting length of 2
+        # Make sure grid constants are reasonable (snakes can't be outside the visible area)
+        grid_width = min(GRID_WIDTH, 40)  # Max 40 for visibility
+        grid_height = min(GRID_HEIGHT, 30)  # Max 30 for visibility
+        
+        # Initialize snakes at different positions with starting length of 3
+        # Position snakes with enough space from walls
+        start_x1 = max(3, grid_width // 4)
+        start_x2 = min(grid_width - 4, grid_width * 3 // 4)
+        
         self.snake1 = deque([
-            ((GRID_WIDTH // 4), GRID_HEIGHT // 2),
-            ((GRID_WIDTH // 4) - 1, GRID_HEIGHT // 2)
+            (start_x1, grid_height // 2),
+            (start_x1 - 1, grid_height // 2),
+            (start_x1 - 2, grid_height // 2)
         ])
         
         self.snake2 = deque([
-            ((GRID_WIDTH * 3) // 4, GRID_HEIGHT // 2),
-            ((GRID_WIDTH * 3) // 4 + 1, GRID_HEIGHT // 2)
+            (start_x2, grid_height // 2),
+            (start_x2 + 1, grid_height // 2),
+            (start_x2 + 2, grid_height // 2)
         ])
         
         # Snake 1 starts moving right, Snake 2 starts moving left
         self.direction1 = np.array([1, 0])
         self.direction2 = np.array([-1, 0])
         
-        # Generate fixed apples in specific areas away from snakes
-        # Place apples in designated areas to avoid overlap
-        self.apple1 = (GRID_WIDTH // 5, GRID_HEIGHT // 5)
-        self.apple2 = (GRID_WIDTH * 4 // 5, GRID_HEIGHT * 4 // 5)
+        # Generate fixed apples in clearly visible positions away from snakes
+        # Make sure they're not too close to walls for better visibility
+        self.apple1 = (max(2, grid_width // 5), max(2, grid_height // 5))
+        self.apple2 = (min(grid_width - 3, grid_width * 4 // 5), 
+                      min(grid_height - 3, grid_height * 4 // 5))
         
         self.score1 = 0
         self.score2 = 0
         
         self.prev_distance_to_apple1 = self._get_distance_to_apple(self.snake1[0], self.apple1)
         self.prev_distance_to_apple2 = self._get_distance_to_apple(self.snake2[0], self.apple2)
+        
+        logger.info(f"Game reset - Snake1 at {self.snake1[0]}, Snake2 at {self.snake2[0]}")
+        logger.info(f"Apple1 at {self.apple1}, Apple2 at {self.apple2}")
         
         # Return both snake states
         return self.get_state1(), self.get_state2()
@@ -206,18 +220,28 @@ class MultiplayerSnakeGame:
         if new_head == apple:
             if snake_name == 'snake1':
                 self.score1 += 1
-                # Generate new apple in a fixed quadrant instead of random
+                # Generate new apple in a fixed position that's visible
+                grid_width = min(GRID_WIDTH, 40)
+                grid_height = min(GRID_HEIGHT, 30)
+                
                 if self.score1 % 2 == 0:  # Even score
-                    self.apple1 = (GRID_WIDTH // 5, GRID_HEIGHT * 4 // 5)
+                    self.apple1 = (max(2, grid_width // 5), min(grid_height - 3, grid_height * 4 // 5))
                 else:  # Odd score
-                    self.apple1 = (GRID_WIDTH * 2 // 5, GRID_HEIGHT // 5)
+                    self.apple1 = (min(grid_width - 3, grid_width * 2 // 5), max(2, grid_height // 5))
+                
+                logger.info(f"Snake1 got apple. New apple at {self.apple1}")
             else:
                 self.score2 += 1
-                # Generate new apple in a fixed quadrant instead of random
+                # Generate new apple in a fixed position that's visible
+                grid_width = min(GRID_WIDTH, 40)
+                grid_height = min(GRID_HEIGHT, 30)
+                
                 if self.score2 % 2 == 0:  # Even score
-                    self.apple2 = (GRID_WIDTH * 4 // 5, GRID_HEIGHT // 5)
+                    self.apple2 = (min(grid_width - 3, grid_width * 4 // 5), max(2, grid_height // 5))
                 else:  # Odd score
-                    self.apple2 = (GRID_WIDTH * 3 // 5, GRID_HEIGHT * 4 // 5)
+                    self.apple2 = (min(grid_width - 3, grid_width * 3 // 5), min(grid_height - 3, grid_height * 4 // 5))
+                    
+                logger.info(f"Snake2 got apple. New apple at {self.apple2}")
                 
             return REWARD_APPLE, False
         else:

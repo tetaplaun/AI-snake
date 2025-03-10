@@ -115,7 +115,7 @@
         <div class="game-container">
             <div>
                 <h2>Agent 1 (Green)</h2>
-                <canvas id="game-board-1" class="game-board" width="400" height="300"></canvas>
+                <canvas id="game-board-1" class="game-board" width="800" height="600"></canvas>
                 <div class="stats-box">
                     <div class="stat-item">Score: <span id="score-1">0</span></div>
                     <div class="stat-item">Wins: <span id="wins-1">0</span></div>
@@ -125,7 +125,7 @@
             
             <div>
                 <h2>Agent 2 (Blue)</h2>
-                <canvas id="game-board-2" class="game-board" width="400" height="300"></canvas>
+                <canvas id="game-board-2" class="game-board" width="800" height="600"></canvas>
                 <div class="stats-box">
                     <div class="stat-item">Score: <span id="score-2">0</span></div>
                     <div class="stat-item">Wins: <span id="wins-2">0</span></div>
@@ -194,25 +194,28 @@
         }
         
         function drawGrid(ctx) {
+            const canvasWidth = ctx.canvas.width;
+            const canvasHeight = ctx.canvas.height;
+            
             ctx.fillStyle = backgroundColor;
-            ctx.fillRect(0, 0, canvas1.width, canvas1.height);
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
             
             ctx.strokeStyle = gridColor;
             ctx.lineWidth = 0.5;
             
             // Draw vertical lines
-            for (let x = 0; x <= canvas1.width; x += gridSize) {
+            for (let x = 0; x <= canvasWidth; x += gridSize) {
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas1.height);
+                ctx.lineTo(x, canvasHeight);
                 ctx.stroke();
             }
             
             // Draw horizontal lines
-            for (let y = 0; y <= canvas1.height; y += gridSize) {
+            for (let y = 0; y <= canvasHeight; y += gridSize) {
                 ctx.beginPath();
                 ctx.moveTo(0, y);
-                ctx.lineTo(canvas1.width, y);
+                ctx.lineTo(canvasWidth, y);
                 ctx.stroke();
             }
         }
