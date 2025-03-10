@@ -1,7 +1,11 @@
 import numpy as np
 from collections import deque
 from .constants import *
-from web.app import broadcast_multiplayer_game_state
+import sys
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class MultiplayerSnakeGame:
     def __init__(self):
@@ -26,8 +30,8 @@ class MultiplayerSnakeGame:
         self.prev_distance_to_apple1 = self._get_distance_to_apple(self.snake1[0], self.apple1)
         self.prev_distance_to_apple2 = self._get_distance_to_apple(self.snake2[0], self.apple2)
         
-        # Send initial game state to frontend
-        broadcast_multiplayer_game_state(self)
+        # Send initial game state to frontend - skipping broadcast for now
+        # Will be handled by the competition manager
         
         # Return both snake states
         return self.get_state1(), self.get_state2()
@@ -138,8 +142,7 @@ class MultiplayerSnakeGame:
             self.snake1, 'snake2'
         )
         
-        # Send updated game state to frontend
-        broadcast_multiplayer_game_state(self)
+        # Game state broadcasting is handled by the competition manager
         
         # Game is done if either snake dies or time limit reached
         done = done1 or done2

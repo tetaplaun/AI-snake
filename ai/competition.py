@@ -1,9 +1,15 @@
 import logging
 import time
+import json
 import numpy as np
 from game.multiplayer_game import MultiplayerSnakeGame
 from ai.agent import QLearningAgent
-from web.app import broadcast_competition_result
+import sys
+import os
+
+# Add project root to path for imports (relative imports don't work well in this setup)
+sys.path.append(os.path.abspath("."))
+from web.app import broadcast_competition_result, socketio
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -58,6 +64,9 @@ class CompetitionManager:
                 
                 # Execute actions in the game
                 reward1, reward2, done = self.game.step(action1, action2)
+                
+                # Broadcast game state to frontend
+                self._broadcast_game_state()
                 
                 # Get new states
                 next_state1 = self.game.get_state1()
@@ -132,3 +141,27 @@ class CompetitionManager:
         broadcast_competition_result(results)
         
         return results
+        
+    def _broadcast_game_state(self):
+        """Broadcast the current game state to the frontend via Socket.IO"""
+        try:
+            # Convert numpy int64 to regular Python int
+            snake1_positions = [(int(x), int(y)) for x, y in self.game.snake1]
+            snake2_positions = [(int(x), int(y)) for x, y in self.game.snake2]
+            apple1_position = (int(self.game.apple1[0]), int(self.game.apple1[1]))
+            apple2_position = (int(self.game.apple2[0]), int(self.game.apple2[1]))
+
+            # Create game state message
+            game_state = {
+                'snake1': snake1_positions,
+                'snake2': snake2_positions,
+                'apple1': apple1_position,
+                'apple2': apple2_position,
+                'score1': self.game.score1,
+                'score2': self.game.score2
+            }
+            
+            # Emit the game state update
+            socketio.emit('multiplayer_state_update', json.dumps(game_state))
+        except Exception as e:
+            logger.error(f"Error broadcasting game state: {e}")
