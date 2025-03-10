@@ -17,14 +17,14 @@ NUM_OBSTACLES = 5  # Reduced from 10 to 5 obstacles
 # AI settings
 LEARNING_RATE = 0.1
 DISCOUNT_FACTOR = 0.95
-EPSILON = 0.1
+EPSILON = 0.3  # Increased from 0.1 to encourage more exploration
 
 # Font settings
 FONT_NAME = "monospace"
 FONT_SIZE = 16
 
 # Rewards
-REWARD_APPLE = 10
-REWARD_MOVE = -0.1
+REWARD_APPLE = 15  # Increased from 10 to make food more attractive
+REWARD_MOVE = -0.01  # Reduced penalty for moving from -0.1
 REWARD_DEATH = -10
 REWARD_OBSTACLE = -10  # Same penalty as death for hitting obstacles
