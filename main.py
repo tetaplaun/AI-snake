@@ -92,10 +92,36 @@ def run_training():
         print("Final state saved. Exiting...", flush=True)
         sys.exit(0)
 
+def save_checkpoint():
+    """
+    Manually save a checkpoint of the current training state
+    """
+    with app.app_context():
+        state_manager = StateManager()
+        metrics_visualizer = MetricsVisualizer()
+
+        # Get the latest Q-table from the agent
+        agent = QLearningAgent(state_size=12, action_size=3)
+        saved_state = state_manager.load_state()
+        if saved_state:
+            agent.load_state(saved_state)
+            success = state_manager.save_state({
+                'q_table': agent.q_table,
+                'scores': metrics_visualizer.scores,
+                'steps': 0,  # Not in active episode
+                'total_reward': 0.0,  # Not in active episode
+                'epsilon': agent.epsilon
+            })
+            if success:
+                print("\nCheckpoint saved successfully!", flush=True)
+                return True
+    return False
+
 if __name__ == "__main__":
     # Create database tables before starting
     with app.app_context():
         db.create_all()
+        save_checkpoint()  # Save initial checkpoint
 
     # Start training in a separate thread
     training_thread = threading.Thread(target=run_training)
