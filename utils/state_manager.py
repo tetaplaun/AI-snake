@@ -66,7 +66,8 @@ class StateManager:
                         q_table[state_key] = np.zeros(3)  # Initialize with number of actions
                     q_table[state_key][entry.action] = entry.q_value
 
-                # Load latest scores from metrics
+                # Load latest metrics
+                latest_metrics = TrainingMetrics.query.order_by(TrainingMetrics.episode.desc()).first()
                 metrics = TrainingMetrics.query.order_by(TrainingMetrics.episode).all()
                 scores = [m.score for m in metrics]
 
@@ -75,7 +76,8 @@ class StateManager:
 
                 return {
                     'q_table': q_table,
-                    'scores': scores
+                    'scores': scores,
+                    'epsilon': latest_metrics.epsilon if latest_metrics else 0.1
                 }
         except Exception as e:
             print(f"Error loading state from database: {e}", flush=True)

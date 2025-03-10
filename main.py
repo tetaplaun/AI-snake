@@ -24,10 +24,11 @@ def run_training():
     # Load previous training if available
     saved_state = state_manager.load_state()
     if saved_state:
-        agent.q_table = saved_state['q_table']
+        agent.load_state(saved_state)
         metrics_visualizer.scores = saved_state['scores']
         print("Loaded previous training state", flush=True)
         print(f"Continuing from episode {len(metrics_visualizer.scores)}", flush=True)
+        print(f"Current exploration rate (epsilon): {agent.epsilon:.3f}", flush=True)
     else:
         print("Starting new training session", flush=True)
 
