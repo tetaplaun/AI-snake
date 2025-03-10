@@ -14,8 +14,8 @@ def run_training():
     # Create game instance
     game = SnakeGame()
 
-    # Initialize AI agent
-    agent = QLearningAgent(state_size=12, action_size=3)
+    # Initialize AI agent with expanded state size
+    agent = QLearningAgent(state_size=16, action_size=3)  # Updated state size to include obstacle info
 
     # Initialize state manager and metrics visualizer
     state_manager = StateManager()

@@ -10,22 +10,37 @@ class SnakeGame:
     def reset(self):
         self.snake = deque([(GRID_WIDTH // 2, GRID_HEIGHT // 2)])
         self.direction = np.array([1, 0])
+        self.obstacles = self._generate_obstacles()
         self.apple = self._generate_apple()
         self.score = 0
         broadcast_game_state(self)
         return self.get_state()
 
+    def _generate_obstacles(self):
+        obstacles = set()
+        center = (GRID_WIDTH // 2, GRID_HEIGHT // 2)
+
+        while len(obstacles) < NUM_OBSTACLES:
+            pos = (np.random.randint(0, GRID_WIDTH),
+                  np.random.randint(0, GRID_HEIGHT))
+
+            # Don't place obstacles too close to the starting position
+            if abs(pos[0] - center[0]) + abs(pos[1] - center[1]) > 5:
+                obstacles.add(pos)
+
+        return obstacles
+
     def _generate_apple(self):
         while True:
             apple = (np.random.randint(0, GRID_WIDTH),
                     np.random.randint(0, GRID_HEIGHT))
-            if apple not in self.snake:
+            if apple not in self.snake and apple not in self.obstacles:
                 return apple
 
     def get_state(self):
         head = self.snake[0]
 
-        # Danger straight, right, left
+        # Danger straight, right, left including obstacles
         danger = [
             self._is_collision(head + self.direction),
             self._is_collision(self._rotate_vector(self.direction, 1)),
@@ -44,12 +59,30 @@ class SnakeGame:
         apple_u = self.apple[1] < head[1]
         apple_d = self.apple[1] > head[1]
 
-        return np.array(danger + [dir_l, dir_r, dir_u, dir_d, apple_l, apple_r, apple_u, apple_d])
+        # Nearest obstacle detection
+        nearest_obstacle = self._find_nearest_obstacle(head)
+        obstacle_l = nearest_obstacle[0] < head[0]
+        obstacle_r = nearest_obstacle[0] > head[0]
+        obstacle_u = nearest_obstacle[1] < head[1]
+        obstacle_d = nearest_obstacle[1] > head[1]
+
+        return np.array(danger + [dir_l, dir_r, dir_u, dir_d, 
+                                apple_l, apple_r, apple_u, apple_d,
+                                obstacle_l, obstacle_r, obstacle_u, obstacle_d])
+
+    def _find_nearest_obstacle(self, pos):
+        if not self.obstacles:
+            return (-1, -1)  # No obstacles
+
+        distances = [(abs(obs[0] - pos[0]) + abs(obs[1] - pos[1]), obs) 
+                    for obs in self.obstacles]
+        return min(distances, key=lambda x: x[0])[1]
 
     def _is_collision(self, pos):
         return (pos[0] < 0 or pos[0] >= GRID_WIDTH or
                 pos[1] < 0 or pos[1] >= GRID_HEIGHT or
-                tuple(pos) in self.snake)
+                tuple(pos) in self.snake or
+                tuple(pos) in self.obstacles)
 
     def _rotate_vector(self, vector, rotation):
         if rotation == 1:  # right
@@ -67,9 +100,9 @@ class SnakeGame:
         new_head = (self.snake[0][0] + self.direction[0],
                    self.snake[0][1] + self.direction[1])
 
-        # Check collision
+        # Check collision with walls, self, or obstacles
         if self._is_collision(new_head):
-            return REWARD_DEATH, True
+            return REWARD_DEATH if tuple(new_head) not in self.obstacles else REWARD_OBSTACLE, True
 
         self.snake.appendleft(new_head)
 
