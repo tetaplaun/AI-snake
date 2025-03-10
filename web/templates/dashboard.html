@@ -14,30 +14,48 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
         }
         .stats-panel {
             background-color: #34495E;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
+            grid-column: 2;
+        }
+        .game-panel {
+            background-color: #34495E;
+            padding: 20px;
+            border-radius: 8px;
+            grid-column: 1;
+            grid-row: 1 / span 2;
         }
         .chart-container {
             background-color: #34495E;
             padding: 20px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            grid-column: 2;
         }
         .stat-value {
             font-size: 24px;
             font-weight: bold;
             color: #2ECC71;
         }
+        #game-canvas {
+            background-color: #2C3E50;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Snake AI Training Dashboard</h1>
-        
+        <div class="game-panel">
+            <h2>Game View</h2>
+            <canvas id="game-canvas" width="800" height="600"></canvas>
+        </div>
+
         <div class="stats-panel">
             <h2>Current Statistics</h2>
             <div>
@@ -57,10 +75,51 @@
         const socket = io();
         let scores = [];
         let episodes = [];
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const GRID_SIZE = 20;
+
+        function drawGame(gameState) {
+            if (!gameState) return;
+
+            // Clear canvas
+            ctx.fillStyle = '#2C3E50';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = '#34495E';
+            for (let x = 0; x < canvas.width; x += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Draw snake
+            ctx.fillStyle = '#2ECC71';
+            gameState.snake.forEach(([x, y]) => {
+                ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
+            });
+
+            // Draw apple
+            ctx.fillStyle = '#E74C3C';
+            ctx.fillRect(
+                gameState.apple[0] * GRID_SIZE,
+                gameState.apple[1] * GRID_SIZE,
+                GRID_SIZE - 1,
+                GRID_SIZE - 1
+            );
+        }
 
         socket.on('metrics_update', function(data) {
             const metrics = JSON.parse(data);
-            
+
             // Update stats
             document.getElementById('current-score').textContent = metrics.current_score;
             document.getElementById('avg-score').textContent = metrics.avg_score.toFixed(2);
@@ -100,6 +159,11 @@
             };
 
             Plotly.newPlot('score-chart', [trace], layout);
+        });
+
+        socket.on('game_state_update', function(data) {
+            const gameState = JSON.parse(data);
+            drawGame(gameState);
         });
     </script>
 </body>

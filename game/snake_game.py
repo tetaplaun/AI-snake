@@ -1,6 +1,7 @@
 import numpy as np
 from collections import deque
 from .constants import *
+from web.app import broadcast_game_state
 
 class SnakeGame:
     def __init__(self):
@@ -11,6 +12,7 @@ class SnakeGame:
         self.direction = np.array([1, 0])
         self.apple = self._generate_apple()
         self.score = 0
+        broadcast_game_state(self)
         return self.get_state()
 
     def _generate_apple(self):
@@ -75,7 +77,9 @@ class SnakeGame:
         if new_head == self.apple:
             self.score += 1
             self.apple = self._generate_apple()
+            broadcast_game_state(self)
             return REWARD_APPLE, False
         else:
             self.snake.pop()
+            broadcast_game_state(self)
             return REWARD_MOVE, False
