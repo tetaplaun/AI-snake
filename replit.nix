@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.which
+    pkgs.libjpeg_turbo
     pkgs.tk
     pkgs.tcl
     pkgs.qhull
